@@ -40,10 +40,16 @@ class RecipeStore {
     final bundled = await loadBundled();
     final custom = await loadCustom();
     final removed = await loadRemoved();
+    final customSlugs = <String>{
+      for (final c in custom)
+        if (c['slug'] != null && c['slug'].toString().isNotEmpty)
+          c['slug'].toString()
+    };
     final out = <Map<String, dynamic>>[];
     for (final r in bundled) {
       final slug = r['slug']?.toString();
       if (slug != null && removed.contains(slug)) continue;
+      if (slug != null && customSlugs.contains(slug)) continue;
       out.add(r);
     }
     out.addAll(custom);
@@ -56,6 +62,27 @@ class RecipeStore {
     final cleaned = Map<String, dynamic>.from(recipe)..remove('custom');
     final next = [...current.map((e) => Map<String, dynamic>.from(e)..remove('custom')), cleaned];
     await p.setString(_kCustom, jsonEncode(next));
+  }
+
+  /// Insert-or-replace a custom recipe by slug. Used by edit flow so a
+  /// bundled recipe edited by the user is saved under its original slug
+  /// (and overrides the bundled copy on load).
+  Future<void> upsertCustom(Map<String, dynamic> recipe) async {
+    final slug = recipe['slug']?.toString();
+    if (slug == null || slug.isEmpty) return;
+    final p = await SharedPreferences.getInstance();
+    final current = await loadCustom();
+    final list = current
+        .map((e) => Map<String, dynamic>.from(e)..remove('custom'))
+        .toList();
+    final cleaned = Map<String, dynamic>.from(recipe)..remove('custom');
+    final idx = list.indexWhere((e) => e['slug']?.toString() == slug);
+    if (idx >= 0) {
+      list[idx] = cleaned;
+    } else {
+      list.add(cleaned);
+    }
+    await p.setString(_kCustom, jsonEncode(list));
   }
 
   Future<void> deleteRecipe(Map<String, dynamic> recipe) async {
