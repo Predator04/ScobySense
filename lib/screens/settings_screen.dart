@@ -240,7 +240,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                      'Local only, fires while ScobySense is running. The ScobySense backend separately handles server-side push via Firebase.',
+                      'Local only, fires while ScobySense is running. The device backend separately handles server-side push via Firebase.',
                       style: TextStyle(
                           fontSize: 12, color: AppTheme.textDim)),
                 ],

@@ -141,7 +141,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
             ),
             const SizedBox(height: 14),
             const Text(
-              'To add another Fermenstation, pair it in the official SCOBYSENSE app '
+              'To add another device, pair it in the official app '
               'first (Bluetooth + WiFi setup). Once it is linked to your '
               'account, it will appear here automatically.',
               style: TextStyle(color: AppTheme.text, height: 1.4),
@@ -262,7 +262,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                           children: const [
                             GlassCard(
                               child: Text(
-                                  'No devices on this account. Pair a Fermenstation in the official ScobySense app first.',
+                                  'No devices on this account. Pair your device in the official app first.',
                                   style: TextStyle(color: AppTheme.textDim)),
                             )
                           ],

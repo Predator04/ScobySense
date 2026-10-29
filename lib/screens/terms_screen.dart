@@ -19,7 +19,7 @@ class TermsScreen extends StatelessWidget {
       Icons.flag_outlined,
       'Unofficial third-party app',
       'ScobySense is a community-built client. It is NOT affiliated with, '
-          'endorsed by, or supported by ScobySense / The Fermenstation. All product '
+          'endorsed by, or supported by the device manufacturer. All product '
           'names, logos, and trademarks belong to their respective owners. '
           'Please do not contact them for help with it.',
     ),
@@ -93,15 +93,15 @@ class TermsScreen extends StatelessWidget {
     _Point(
       Icons.vpn_key_outlined,
       'Your account is your responsibility',
-      'You are responsible for your own ScobySense account credentials, for '
+      'You are responsible for your own account credentials, for '
           'keeping them secure, and for all activity under your account. You '
-          'must also comply with ScobySense / The Fermenstation\'s own terms of '
+          'must also comply with the device manufacturer\'s own terms of '
           'service.',
     ),
     _Point(
       Icons.cloud_queue,
-      'Dependent on ScobySense\'s backend',
-      'ScobySense talks to ScobySense\'s backend. If ScobySense changes, throttles, or '
+      'Dependent on the device backend',
+      'ScobySense talks to the device backend. If it changes, throttles, or '
           'revokes access, the app may stop working at any time without '
           'notice, and the creator(s) have no obligation to restore service.',
     ),

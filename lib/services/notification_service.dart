@@ -6,7 +6,7 @@ import 'prefs.dart';
 /// Local notifications wrapper.
 ///
 /// All deliveries happen on-device while the app is alive. The server-side
-/// push system used by the official ScobySense app (Firebase Cloud Messaging) is
+/// push system used by the official app (Firebase Cloud Messaging) is
 /// intentionally out of scope.
 class NotificationService {
   NotificationService._();

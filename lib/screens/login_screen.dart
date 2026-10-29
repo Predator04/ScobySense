@@ -167,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'Uses your ScobySense (thekombu.com) account. Credentials go only to Amazon Cognito.',
+                        'Uses your account from the official app. Credentials go only to Amazon Cognito.',
                         style: TextStyle(
                             fontSize: 12, color: AppTheme.textDim),
                         textAlign: TextAlign.center,

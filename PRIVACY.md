@@ -13,9 +13,9 @@ your device and talks to third-party services on your behalf:
 
 - **Amazon Cognito (`cognito-idp.us-east-1.amazonaws.com`)** —
   your email and password are sent only to Amazon Cognito to sign you
-  into the same ScobySense AWS account the official app uses. ScobySense
+  into the same AWS account the official app uses. ScobySense
   never sees, logs, or forwards those credentials anywhere else.
-- **ScobySense AWS AppSync GraphQL endpoint
+- **AWS AppSync GraphQL endpoint
   (`*.appsync-api.us-east-1.amazonaws.com`)** — the Cognito ID token
   from the step above is sent with each request to read device status,
   brew-cycle history, and alert rules associated with your account. All
@@ -48,7 +48,7 @@ Clearing the app's data (Android Settings → Apps → ScobySense → Storage
 ScobySense can show local Android notifications when a configured alert
 rule's temperature threshold is crossed or when a brew timer completes.
 These are generated locally while the app is running. The server-side
-push system used by the official ScobySense app (Firebase Cloud Messaging) is
+push system used by the official app (Firebase Cloud Messaging) is
 **not** part of ScobySense.
 
 ## Data we do not collect

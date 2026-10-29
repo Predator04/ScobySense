@@ -372,7 +372,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Stored on this device only — does not change the name on ScobySense\'s servers.',
+              'Stored on this device only — does not change the name on the device servers.',
               style: TextStyle(color: AppTheme.textDim, fontSize: 12),
             ),
           ],
