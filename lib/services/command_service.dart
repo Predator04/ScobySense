@@ -1,48 +1,34 @@
 import 'appsync_client.dart';
 
-// -----------------------------------------------------------------------------
-// PAYLOAD_WRAPPER_TODO
-//
-// The exact JSON wrapper the device expects for pushCommand is NOT confirmed.
-// Known from reverse-engineering libapp.so:
-//   topic = "<deviceId>/down/cmd"
-//   commands = set_heater, set_sound, safety_stop, set_heating_time
-//   device ACKs with "start ack message received for ..."
-//
-// The default wrapper below matches the obvious shape ({command, value}),
-// but DO NOT trust it until confirmed by a live packet capture against the
-// real device. Flip the wrapper here in one place when the real shape is known.
-// -----------------------------------------------------------------------------
-Map<String, dynamic> buildCommandPayload(String command, Object? value) {
-  // PAYLOAD_WRAPPER_TODO — confirm this shape before relying on writes.
-  return {'command': command, if (value != null) 'value': value};
-}
+String commandTopic(String deviceId) => 'kombu/$deviceId/down/cmd';
 
-String commandTopic(String deviceId) => '$deviceId/down/cmd';
+String _cmdId() => 'scobysense-${DateTime.now().millisecondsSinceEpoch}';
 
 class CommandService {
   final AppSyncClient client;
   CommandService(this.client);
 
-  Future<String> _send(String deviceId, String command, Object? value) {
-    return client.pushCommand(
-      commandTopic(deviceId),
-      buildCommandPayload(command, value),
-    );
+  Future<bool> setBrewTimer(String deviceId, String side, int days) {
+    return client.pushCommand(commandTopic(deviceId), {
+      'command': 'set_heater',
+      'cmd_id': _cmdId(),
+      'target': side,
+      'params': {'remaining_time': days * 86400},
+    });
   }
 
-  Future<String> setHeaterF1(String deviceId, bool on) =>
-      _send(deviceId, 'set_heater', {'side': 'F1', 'on': on});
+  Future<bool> setSound(String deviceId, bool on) {
+    return client.pushCommand(commandTopic(deviceId), {
+      'command': 'set_sound',
+      'cmd_id': _cmdId(),
+      'target': on ? 'on' : 'off',
+    });
+  }
 
-  Future<String> setHeaterF2(String deviceId, bool on) =>
-      _send(deviceId, 'set_heater', {'side': 'F2', 'on': on});
-
-  Future<String> setBrewTimer(String deviceId, String side, int days) =>
-      _send(deviceId, 'set_heating_time', {'side': side, 'durationDays': days});
-
-  Future<String> setSound(String deviceId, bool on) =>
-      _send(deviceId, 'set_sound', on);
-
-  Future<String> safetyStop(String deviceId) =>
-      _send(deviceId, 'safety_stop', true);
+  Future<bool> safetyStop(String deviceId) {
+    return client.pushCommand(commandTopic(deviceId), {
+      'command': 'set_stop_device',
+      'cmd_id': _cmdId(),
+    });
+  }
 }
