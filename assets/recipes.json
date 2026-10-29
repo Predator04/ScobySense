@@ -1,24 +1,22 @@
 {
-  "source": "thekombu.com",
   "unit_note": "Measurements shown as metric / US imperial. Temperatures shown as °C / °F. 1 cup = 240ml, 1 tbsp = 15ml, 1 tsp = 5ml, 1 fl oz = 30ml, 1 oz = 28g.",
   "recipes": [
     {
       "slug": "ginger-bug",
       "title": "Ginger Bug",
       "type": "culture",
-      "url": "https://thekombu.com/blogs/journal/ginger-bug-recipe-fermenstation",
       "ferment_temp": "26-30°C / 79-86°F",
-      "summary": "Wild fermented culture: fresh ginger + sugar + water. Captures natural yeast/bacteria from ginger skin into a live starter that carbonates any sweetened liquid.",
+      "summary": "A wild starter culture made from fresh ginger, sugar, and water. The natural yeast and bacteria living on ginger skin kick off fermentation, giving you a live base that carbonates any sweetened drink.",
       "steps": [
-        "Day 1: 4 cups (1L) filtered water + 2 tbsp (30ml) chopped ginger + 2 tbsp (30ml / 25g) sugar, stir to dissolve, into Fermenstation jar with lid.",
-        "Days 2-7: feed daily with 1 tbsp (15ml) ginger + 1 tbsp (15ml / 12g) sugar, stir, re-cover.",
-        "Ready when small bubbles rise on stirring (days 3-4), tangy yeasty smell, lightly sour fizzy taste.",
-        "Harvest: strain, discard old ginger, reserve 200ml (¾ cup + 1 tbsp) per soda batch, top up jar to 1L (4¼ cups), feed 1 tbsp each.",
-        "Rest: fridge + feed 1 tbsp each once/week. Wake: feed + 12-24h in Fermenstation before use."
+        "Day 1: combine 4 cups (1L) filtered water, 2 tbsp (30ml) chopped ginger, and 2 tbsp (30ml / 25g) sugar in a clean jar. Stir to dissolve and cover loosely.",
+        "Days 2-7: each day, stir in 1 tbsp (15ml) fresh ginger and 1 tbsp (15ml / 12g) sugar, then re-cover.",
+        "It's ready when stirring brings up small bubbles (usually days 3-4) and it smells yeasty with a lightly sour, fizzy taste.",
+        "To use: strain out the old ginger and set aside 200ml (¾ cup) for a soda batch, then top the jar back up to 1L (4¼ cups) with water and feed 1 tbsp of each.",
+        "To rest it: keep in the fridge and feed 1 tbsp of each once a week. To wake it: feed and leave at room temperature 12-24 hours before using."
       ],
-      "warning_signs": "Fuzzy mold (white/green/black/pink) or rotten smell = discard. Thin white film / cloudy liquid = normal.",
+      "warning_signs": "Fuzzy mold (white, green, black, or pink) or a rotten smell means throw it out. A thin white film or cloudy liquid is normal.",
       "soda": {
-        "title": "Ginger Bug Soda (ginger ale/beer)",
+        "title": "Ginger Bug Soda",
         "makes": "4 x 700ml bottles (about 2.5L / 10½ cups)",
         "ingredients": [
           {"name": "Filtered water", "amount": "3L / 12 cups"},
@@ -32,12 +30,12 @@
           {"name": "Strained ginger bug liquid", "amount": "200ml / ¾ cup"}
         ],
         "steps": [
-          "Boil 1L (4¼ cups) water, add ginger/sugar/lemon peel/spices, simmer 5 min, steep until lukewarm (room temp).",
-          "Strain bug, measure 200ml (¾ cup), feed the rest.",
-          "Strain tea into pitcher, add remaining 2L (8½ cups) water + lemon juice.",
-          "Add bug liquid, pour into 4x700ml (3 cup) bottles, 1 inch (2.5cm) headspace, close tight.",
-          "F2 ferment 2-3 days, burp to check carbonation.",
-          "Chill fully before opening."
+          "Boil 1L (4¼ cups) water, then add the ginger, sugar, lemon peel, and spices. Simmer 5 minutes and let it cool to room temperature.",
+          "Strain the ginger bug and measure out 200ml (¾ cup); feed the rest.",
+          "Strain the cooled liquid into a pitcher and discard the solids. Add the remaining 2L (8½ cups) water and the lemon juice.",
+          "Stir in the ginger bug liquid, pour into 4 x 700ml (3-cup) bottles leaving 1 inch (2.5cm) headspace, and seal tightly.",
+          "Let it carbonate 2-3 days, opening briefly to check the fizz.",
+          "Chill completely before opening."
         ]
       }
     },
@@ -45,8 +43,7 @@
       "slug": "ginger-beer",
       "title": "Ginger Beer",
       "tag": "classic",
-      "url": "https://thekombu.com/blogs/recipes/ginger-beer",
-      "summary": "The classic spicy ginger ale, built from a live ginger bug. Makes 4 x 700ml bottles.",
+      "summary": "A classic spicy ginger ale built from a live ginger bug. Yields 4 x 700ml bottles.",
       "makes": "4 x 700ml bottles (about 2.5L / 10½ cups)",
       "ingredients": [
         {"name": "Filtered water", "amount": "3L / 12 cups"},
@@ -60,22 +57,21 @@
         {"name": "Strained ginger bug liquid", "amount": "200ml / ¾ cup"}
       ],
       "steps": [
-        "Bring 1L (4¼ cups) water to a boil. Add ginger, sugar, lemon peel, peppercorns, allspice, cloves. Stir until sugar dissolves. Simmer gently 5 min, then remove from heat and steep until lukewarm.",
-        "Strain the bug through a mesh strainer and measure out 200ml (¾ cup). Return the rest to the jar, top up with fresh filtered water, and feed 1 tbsp (15ml) each of ginger and sugar.",
-        "Once the tea is lukewarm or cooler (hot liquid kills the yeast), strain into a pitcher and discard solids. Add the remaining 2L (8½ cups) room-temperature water and the lemon juice. Stir gently.",
-        "Add the 200ml (¾ cup) ginger bug liquid and stir. Pour into 4 x 700ml bottles, leaving 1 inch (2.5cm) headspace. Close tightly.",
-        "Ferment in the F2 side for 2-3 days.",
-        "Lightly burp the carbonation cap to check fizz. Add days for more fizz.",
-        "Chill completely before opening."
+        "Bring 1L (4¼ cups) water to a boil. Stir in the ginger, sugar, lemon peel, peppercorns, allspice, and cloves until the sugar dissolves. Simmer gently 5 minutes, then remove from heat and cool until just warm.",
+        "Strain the ginger bug through a fine mesh and measure out 200ml (¾ cup). Top up the rest with fresh water and feed 1 tbsp (15ml) each of ginger and sugar.",
+        "Once the liquid is lukewarm or cooler (heat kills the yeast), strain it into a pitcher and discard the solids. Add the remaining 2L (8½ cups) water and the lemon juice, and stir.",
+        "Stir in the 200ml (¾ cup) ginger bug. Pour into 4 x 700ml bottles, leaving 1 inch (2.5cm) headspace, and cap tightly.",
+        "Ferment 2-3 days for carbonation.",
+        "Open a cap briefly to check the fizz; give it more days for a stronger sparkle.",
+        "Refrigerate fully before serving."
       ],
-      "prep_tips": "Omit the lemon and spices for a simpler version. Refrigerated, keeps a couple weeks and slowly loses sweetness."
+      "prep_tips": "Leave out the lemon and spices for a simpler version. Keeps for a couple of weeks refrigerated, slowly losing sweetness."
     },
     {
       "slug": "old-thyme-pink-lemonade",
-      "title": "Old Thyme Pink Lemonade",
+      "title": "Thyme Pink Lemonade",
       "tag": "culinary",
-      "url": "https://thekombu.com/blogs/recipes/old-thyme-pink-lemonade-1",
-      "summary": "Classic sweet-tart pink lemonade with a grown-up twist.",
+      "summary": "A sweet-tart pink lemonade with a subtle herb note.",
       "per_bottle": true,
       "ingredients": [
         {"name": "Tea", "amount": "Black or green"},
@@ -85,14 +81,13 @@
         {"name": "Thyme or mint", "amount": "1 sprig"},
         {"name": "Fresh ginger, peeled, sliced", "amount": "¼-½ inch / 6-12mm"}
       ],
-      "prep_tips": "Blend berries, lemon juice, and ginger into a puree and double-strain through a fine sieve to reduce pectin and keep the pour clean."
+      "prep_tips": "Blend the berries, lemon juice, and ginger into a purée and strain through a fine sieve so the pour stays clean."
     },
     {
       "slug": "pineapple-popstar",
-      "title": "Pineapple Popstar",
+      "title": "Pineapple Star Anise",
       "tag": "culinary",
-      "url": "https://thekombu.com/blogs/recipes/pineapple-popstar",
-      "summary": "Pineapple stays juicy and bright while star anise adds a subtle licorice spice.",
+      "summary": "Bright pineapple with a gentle licorice note from star anise.",
       "per_bottle": true,
       "ingredients": [
         {"name": "Tea", "amount": "Black or green"},
@@ -103,14 +98,13 @@
         {"name": "Fresh ginger, peeled, chopped", "amount": "½ inch / 12mm"},
         {"name": "Lemon juice (optional)", "amount": "0.5-1 oz / 15-30ml"}
       ],
-      "prep_tips": "Experiment with the amount of star anise."
+      "prep_tips": "Start with one segment of star anise and add more to taste."
     },
     {
       "slug": "cherry-bomb",
-      "title": "Cherry Bomb",
+      "title": "Cherry Chili",
       "tag": "adventurous",
-      "url": "https://thekombu.com/blogs/recipes/cherry-bomb",
-      "summary": "Sweet, jammy cherry leads the flavor while ancho chili adds gentle warmth.",
+      "summary": "Sweet, jammy cherry with a warm, gentle heat from ancho chili.",
       "per_bottle": true,
       "ingredients": [
         {"name": "Tea", "amount": "Black or green"},
@@ -121,14 +115,13 @@
         {"name": "Ancho chili", "amount": "½-1 inch / 12-25mm (or a dash of spice)"},
         {"name": "Vanilla extract", "amount": "⅛ tsp / 0.6ml"}
       ],
-      "prep_tips": "Lightly crush the cherries to release juice for carbonation; use a small piece of ancho so the spice infuses without overpowering."
+      "prep_tips": "Crush the cherries lightly to free their juice; use a small piece of chili so it warms rather than overpowers."
     },
     {
       "slug": "raspberry-trilogy",
-      "title": "Raspberry Trilogy",
+      "title": "Raspberry Lemon Ginger",
       "tag": "adventurous",
-      "url": "https://thekombu.com/blogs/recipes/raspberry-trilogy",
-      "summary": "An iconic trio: tart raspberry, bright lemon, and ginger heat that builds on the finish.",
+      "summary": "Tart raspberry, bright lemon, and ginger heat that builds on the finish.",
       "per_bottle": true,
       "ingredients": [
         {"name": "Tea", "amount": "Black or green"},
@@ -137,14 +130,13 @@
         {"name": "Sugar", "amount": "1-2 tbsp"},
         {"name": "Fresh ginger, peeled, chopped", "amount": "¼-½ inch / 6-12mm"}
       ],
-      "prep_tips": "Mash the berries into a paste to release flavor. Grated ginger adds more bite and can boost fizz."
+      "prep_tips": "Mash the berries into a paste to release their flavor; grated ginger adds bite and can boost fizz."
     },
     {
       "slug": "smokey-margarita",
-      "title": "Smokey Margarita",
+      "title": "Smoky Citrus",
       "tag": "adventurous",
-      "url": "https://thekombu.com/blogs/recipes/smokey-margarita",
-      "summary": "Bright lime and citrus lead the profile while lapsang souchong tea adds a deep smoky note reminiscent of a mezcal margarita.",
+      "summary": "Bright lime and citrus over a deep smoky tea base.",
       "per_bottle": true,
       "ingredients": [
         {"name": "Tea", "amount": "Black lapsang souchong"},
@@ -155,14 +147,13 @@
         {"name": "Saline solution", "amount": "2-4 drops"},
         {"name": "Jalapeño slices", "amount": "optional"}
       ],
-      "prep_tips": "Brew lapsang tea as usual. If the smokiness is too strong, mix with black tea to dilute."
+      "prep_tips": "Brew the lapsang tea as usual; if the smoke is too strong, cut it with regular black tea."
     },
     {
       "slug": "la-fruit-cart",
-      "title": "L.A. Fruit Cart",
+      "title": "Mango Tajín",
       "tag": "culinary",
-      "url": "https://thekombu.com/blogs/recipes/l-a-fruit-cart",
-      "summary": "Juicy mango brings tropical sweetness while Tajín adds a kick of chili, lime, and salt.",
+      "summary": "Juicy mango with a chili-lime-salt kick from Tajín.",
       "per_bottle": true,
       "ingredients": [
         {"name": "Tea", "amount": "Green jasmine"},
@@ -172,14 +163,13 @@
         {"name": "Sugar or honey", "amount": "1-2 tbsp"},
         {"name": "Tajín spice", "amount": "⅛ tsp / 0.6ml"}
       ],
-      "prep_tips": "Lightly mash the mango to release more juice for carbonation; start with a small pinch of tajín."
+      "prep_tips": "Mash the mango lightly to release more juice for carbonation; start with a small pinch of Tajín."
     },
     {
       "slug": "tropical-hops",
-      "title": "Tropical Hops",
+      "title": "Hoppy Pineapple",
       "tag": "adventurous",
-      "url": "https://thekombu.com/blogs/recipes/tropical-hops",
-      "summary": "A sunny IPA-style booch with tropical citrus and a floral hop bite.",
+      "summary": "A sunny, IPA-style brew with tropical citrus and a floral hop bite.",
       "per_bottle": true,
       "ingredients": [
         {"name": "Tea", "amount": "Black or green"},
@@ -190,13 +180,12 @@
         {"name": "Sugar", "amount": "1-2 tbsp"},
         {"name": "Dried hop pellets", "amount": "1.5g / 5-6 pellets"}
       ],
-      "prep_tips": "Add hops directly and taste at 4-6 hours, then remove. For more intensity, warm-steep the hops (not boiling) 5-10 min, cool, then add."
+      "prep_tips": "Add the hops directly and taste after 4-6 hours, then remove. For more intensity, steep the hops in warm (not boiling) water 5-10 minutes, cool, and add."
     },
     {
       "slug": "blue-sapphire",
-      "title": "Blue Sapphire",
+      "title": "Blue Spirulina Coconut",
       "tag": "adventurous",
-      "url": "https://thekombu.com/blogs/recipes/blue-sapphire",
       "summary": "Coconut water and ginger with vivid blue spirulina for a striking color.",
       "per_bottle": true,
       "ingredients": [
@@ -205,7 +194,7 @@
         {"name": "Ginger simple syrup (or sugar + ginger juice)", "amount": "1 tbsp / 15ml"},
         {"name": "Blue spirulina powder", "amount": "⅛-¼ tsp / 0.6-1.25ml"}
       ],
-      "prep_tips": "DIY ginger simple syrup: combine 1 cup (240ml) water + ¾ cup (180ml / 150g) sugar, heat until dissolved. Add 225g (8 oz) peeled cubed ginger, simmer 15 min. Remove from heat and steep 60-90 min. Strain and refrigerate. Makes ~240ml (1 cup). If you have a juicer, swap the syrup for ½ tsp fresh ginger juice."
+      "prep_tips": "DIY ginger simple syrup: heat 1 cup (240ml) water with ¾ cup (180ml / 150g) sugar until dissolved, add 225g (8 oz) peeled cubed ginger, simmer 15 minutes, then steep 60-90 minutes off heat. Strain and refrigerate (makes about 1 cup). With a juicer, swap the syrup for ½ tsp fresh ginger juice."
     }
   ]
 }
