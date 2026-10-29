@@ -17,6 +17,15 @@ class CommandService {
     });
   }
 
+  Future<bool> stopBrew(String deviceId, String side) {
+    return client.pushCommand(commandTopic(deviceId), {
+      'command': 'set_heater',
+      'cmd_id': _cmdId(),
+      'target': side,
+      'params': {'remaining_time': 0},
+    });
+  }
+
   Future<bool> setSound(String deviceId, bool on) {
     return client.pushCommand(commandTopic(deviceId), {
       'command': 'set_sound',
