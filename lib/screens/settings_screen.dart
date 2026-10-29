@@ -280,21 +280,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const SectionTitle('WRITE CONTROL'),
-            GlassCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text('Device write path',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
-                  SizedBox(height: 4),
-                  Text(
-                      'Topic: <deviceId>/down/cmd. Commands: set_heater, set_sound, safety_stop, set_heating_time. The exact JSON payload wrapper is still being confirmed — see command_service.dart (PAYLOAD_WRAPPER_TODO).',
-                      style: TextStyle(
-                          fontSize: 12, color: AppTheme.textDim)),
-                ],
-              ),
-            ),
             const SizedBox(height: 16),
             const SectionTitle('SESSION'),
             GlassCard(
