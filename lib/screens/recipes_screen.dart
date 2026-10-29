@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../services/recipe_store.dart';
 import '../theme.dart';
 import '../widgets/glass_card.dart';
+import 'add_recipe_screen.dart';
 
 class RecipesScreen extends StatefulWidget {
   const RecipesScreen({super.key});
@@ -12,6 +12,7 @@ class RecipesScreen extends StatefulWidget {
 }
 
 class _RecipesScreenState extends State<RecipesScreen> {
+  final _store = RecipeStore();
   List<Map<String, dynamic>> _all = const [];
   String _query = '';
   String? _tag;
@@ -26,10 +27,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
   Future<void> _load() async {
     try {
-      final raw = await rootBundle.loadString('assets/recipes.json');
-      final map = jsonDecode(raw) as Map<String, dynamic>;
-      final items = ((map['recipes'] as List?) ?? const [])
-          .cast<Map<String, dynamic>>();
+      final items = await _store.loadMerged();
       setState(() {
         _all = items;
         _loading = false;
@@ -61,10 +59,67 @@ class _RecipesScreenState extends State<RecipesScreen> {
     }).toList();
   }
 
+  Future<void> _openAdd() async {
+    final added = await Navigator.push<bool?>(
+      context,
+      MaterialPageRoute(builder: (_) => const AddRecipeScreen()),
+    );
+    if (added == true) {
+      await _load();
+    }
+  }
+
+  Future<void> _confirmDelete(Map<String, dynamic> r) async {
+    final isCustom = r['custom'] == true;
+    final title = (r['title'] ?? r['slug'] ?? 'this recipe').toString();
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bg2,
+        title: const Text('Delete recipe?'),
+        content: Text(
+          isCustom
+              ? 'Delete your custom recipe "$title"? This can\'t be undone.'
+              : 'Hide the built-in recipe "$title" from your list? You can get it back by reinstalling or clearing app data.',
+          style: const TextStyle(color: AppTheme.text),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await _store.deleteRecipe(r);
+      await _load();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Removed "$title"')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Recipes')),
+      floatingActionButton: _loading || _error != null
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: _openAdd,
+              backgroundColor: AppTheme.accent,
+              foregroundColor: const Color(0xFF04070A),
+              icon: const Icon(Icons.add),
+              label: const Text('Add recipe',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
       body: AppBackground(
         child: _loading
             ? const Center(
@@ -111,13 +166,17 @@ class _RecipesScreenState extends State<RecipesScreen> {
                         ),
                       Expanded(
                         child: ListView.separated(
-                          padding: const EdgeInsets.all(16),
+                          padding:
+                              const EdgeInsets.fromLTRB(16, 8, 16, 96),
                           itemCount: _filtered.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 12),
                           itemBuilder: (_, i) {
                             final r = _filtered[i];
-                            return _RecipeCard(data: r);
+                            return _RecipeCard(
+                              data: r,
+                              onDelete: () => _confirmDelete(r),
+                            );
                           },
                         ),
                       ),
@@ -161,10 +220,12 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
 class _RecipeCard extends StatelessWidget {
   final Map<String, dynamic> data;
-  const _RecipeCard({required this.data});
+  final VoidCallback onDelete;
+  const _RecipeCard({required this.data, required this.onDelete});
 
   @override
   Widget build(BuildContext context) {
+    final isCustom = data['custom'] == true;
     return GlassCard(
       onTap: () {
         Navigator.push(
@@ -189,8 +250,25 @@ class _RecipeCard extends StatelessWidget {
                             fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                     ),
+                    if (isCustom)
+                      Container(
+                        margin: const EdgeInsets.only(left: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.accent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                              color:
+                                  AppTheme.accent.withValues(alpha: 0.4)),
+                        ),
+                        child: const Text('custom',
+                            style: TextStyle(
+                                color: AppTheme.accent, fontSize: 10)),
+                      ),
                     if (data['tag'] != null)
                       Container(
+                        margin: const EdgeInsets.only(left: 6),
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
@@ -218,6 +296,12 @@ class _RecipeCard extends StatelessWidget {
               ],
             ),
           ),
+          IconButton(
+            tooltip: 'Delete recipe',
+            icon: const Icon(Icons.delete_outline,
+                color: AppTheme.danger, size: 20),
+            onPressed: onDelete,
+          ),
           const Icon(Icons.chevron_right, color: AppTheme.textDim),
         ],
       ),
@@ -231,7 +315,8 @@ class _RecipeDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final soda = data['soda'] as Map<String, dynamic>?;
+    final soda = data['soda'];
+    final hasSoda = soda is Map<String, dynamic>;
     return Scaffold(
       appBar: AppBar(title: Text(data['title']?.toString() ?? 'Recipe')),
       body: AppBackground(
@@ -239,7 +324,7 @@ class _RecipeDetail extends StatelessWidget {
           padding: const EdgeInsets.all(16),
           children: [
             _RecipeBlock(data: data),
-            if (soda != null) ...[
+            if (hasSoda) ...[
               const SizedBox(height: 12),
               _RecipeBlock(data: soda, isSub: true),
             ],
