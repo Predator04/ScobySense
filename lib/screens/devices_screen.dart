@@ -27,7 +27,7 @@ class DevicesScreen extends StatefulWidget {
 
 class _DevicesScreenState extends State<DevicesScreen> {
   late final AppSyncClient _client = AppSyncClient(widget.auth);
-  Future<List<KombuDevice>>? _future;
+  Future<List<BrewerDevice>>? _future;
   bool _offline = false;
   Map<String, String> _localNames = const {};
   late final StreamSubscription<List<ConnectivityResult>> _connSub;
@@ -69,7 +69,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
     _loadLocalNames();
     try {
       await f;
-    } on KombuFailure catch (e) {
+    } on AppFailure catch (e) {
       _snack(e.message);
     } catch (e) {
       _snack(e.toString());
@@ -99,7 +99,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
   Future<void> _showAddDeviceSheet() async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: KombuTheme.bg2,
+      backgroundColor: AppTheme.bg2,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -122,12 +122,12 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   height: 32,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    color: KombuTheme.accent.withValues(alpha: 0.14),
+                    color: AppTheme.accent.withValues(alpha: 0.14),
                     border: Border.all(
-                        color: KombuTheme.accent.withValues(alpha: 0.4)),
+                        color: AppTheme.accent.withValues(alpha: 0.4)),
                   ),
                   child: const Icon(Icons.add_link,
-                      color: KombuTheme.accent, size: 18),
+                      color: AppTheme.accent, size: 18),
                 ),
                 const SizedBox(width: 10),
                 const Expanded(
@@ -141,16 +141,16 @@ class _DevicesScreenState extends State<DevicesScreen> {
             ),
             const SizedBox(height: 14),
             const Text(
-              'To add another Fermenstation, pair it in the official KOMBU app '
+              'To add another device, pair it in the official app '
               'first (Bluetooth + WiFi setup). Once it is linked to your '
               'account, it will appear here automatically.',
-              style: TextStyle(color: KombuTheme.text, height: 1.4),
+              style: TextStyle(color: AppTheme.text, height: 1.4),
             ),
             const SizedBox(height: 12),
             const Text(
               'ScobySense supports multiple devices — every linked machine '
               'shows as its own card on this screen.',
-              style: TextStyle(color: KombuTheme.textDim, fontSize: 12),
+              style: TextStyle(color: AppTheme.textDim, fontSize: 12),
             ),
             const SizedBox(height: 20),
             Row(
@@ -169,7 +169,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
                   child: const Text('Close',
-                      style: TextStyle(color: KombuTheme.textDim)),
+                      style: TextStyle(color: AppTheme.textDim)),
                 ),
               ],
             ),
@@ -184,13 +184,13 @@ class _DevicesScreenState extends State<DevicesScreen> {
     return Scaffold(
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _showAddDeviceSheet,
-        backgroundColor: KombuTheme.accent,
+        backgroundColor: AppTheme.accent,
         foregroundColor: const Color(0xFF04070A),
         icon: const Icon(Icons.add),
         label: const Text('Add device',
             style: TextStyle(fontWeight: FontWeight.w700)),
       ),
-      body: KombuBackground(
+      body: AppBackground(
         child: SafeArea(
           child: Column(
             children: [
@@ -233,18 +233,18 @@ class _DevicesScreenState extends State<DevicesScreen> {
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _refresh,
-                  color: KombuTheme.accent,
-                  child: FutureBuilder<List<KombuDevice>>(
+                  color: AppTheme.accent,
+                  child: FutureBuilder<List<BrewerDevice>>(
                     future: _future,
                     builder: (context, snap) {
                       if (snap.connectionState != ConnectionState.done) {
                         return const Center(
                             child: CircularProgressIndicator(
-                                color: KombuTheme.accent));
+                                color: AppTheme.accent));
                       }
                       if (snap.hasError) {
                         final err = snap.error;
-                        final msg = err is KombuFailure
+                        final msg = err is AppFailure
                             ? err.message
                             : err.toString();
                         return ListView(
@@ -262,8 +262,8 @@ class _DevicesScreenState extends State<DevicesScreen> {
                           children: const [
                             GlassCard(
                               child: Text(
-                                  'No devices on this account. Pair a Fermenstation in the official Kombu app first.',
-                                  style: TextStyle(color: KombuTheme.textDim)),
+                                  'No devices on this account. Pair your device in the official app first.',
+                                  style: TextStyle(color: AppTheme.textDim)),
                             )
                           ],
                         );
@@ -333,12 +333,12 @@ class _DevicesScreenState extends State<DevicesScreen> {
                     height: 34,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
-                      color: KombuTheme.accent.withValues(alpha: 0.14),
+                      color: AppTheme.accent.withValues(alpha: 0.14),
                       border: Border.all(
-                          color: KombuTheme.accent.withValues(alpha: 0.4)),
+                          color: AppTheme.accent.withValues(alpha: 0.4)),
                     ),
                     child: const Icon(Icons.system_update_alt,
-                        color: KombuTheme.accent, size: 18),
+                        color: AppTheme.accent, size: 18),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -348,7 +348,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                         Text(
                           'Update available — v${release.version}',
                           style: const TextStyle(
-                              color: KombuTheme.accent,
+                              color: AppTheme.accent,
                               fontSize: 13,
                               fontWeight: FontWeight.w700),
                         ),
@@ -356,7 +356,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                         const Text(
                           'tap to download',
                           style: TextStyle(
-                              color: KombuTheme.textDim, fontSize: 11),
+                              color: AppTheme.textDim, fontSize: 11),
                         ),
                       ],
                     ),
@@ -364,7 +364,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   IconButton(
                     tooltip: 'Dismiss',
                     icon: const Icon(Icons.close,
-                        color: KombuTheme.textDim, size: 18),
+                        color: AppTheme.textDim, size: 18),
                     onPressed: () =>
                         setState(() => _updateBannerDismissed = true),
                   ),
@@ -389,7 +389,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
               'v$version',
               style: TextStyle(
                 fontSize: 11,
-                color: KombuTheme.textDim.withValues(alpha: 0.6),
+                color: AppTheme.textDim.withValues(alpha: 0.6),
                 letterSpacing: 0.3,
               ),
             ),
@@ -401,7 +401,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
 }
 
 class _DeviceTile extends StatelessWidget {
-  final KombuDevice device;
+  final BrewerDevice device;
   final String? displayName;
   final VoidCallback onTap;
   const _DeviceTile(
@@ -425,16 +425,16 @@ class _DeviceTile extends StatelessWidget {
               shape: BoxShape.circle,
               gradient: LinearGradient(
                 colors: online
-                    ? const [KombuTheme.accent, Color(0xFF2DD4BF)]
+                    ? const [AppTheme.accent, Color(0xFF2DD4BF)]
                     : [
-                        KombuTheme.textDim.withValues(alpha: 0.4),
-                        KombuTheme.textDim.withValues(alpha: 0.2)
+                        AppTheme.textDim.withValues(alpha: 0.4),
+                        AppTheme.textDim.withValues(alpha: 0.2)
                       ],
               ),
               boxShadow: online
                   ? [
                       BoxShadow(
-                        color: KombuTheme.accent.withValues(alpha: 0.4),
+                        color: AppTheme.accent.withValues(alpha: 0.4),
                         blurRadius: 14,
                         spreadRadius: -2,
                       )
@@ -445,7 +445,7 @@ class _DeviceTile extends StatelessWidget {
               online ? Icons.local_fire_department : Icons.power_settings_new,
               color: online
                   ? const Color(0xFF04070A)
-                  : KombuTheme.textDim,
+                  : AppTheme.textDim,
               size: 22,
             ),
           ),
@@ -462,7 +462,7 @@ class _DeviceTile extends StatelessWidget {
                 const SizedBox(height: 2),
                 Text(device.deviceId,
                     style: const TextStyle(
-                        fontSize: 11, color: KombuTheme.textDim)),
+                        fontSize: 11, color: AppTheme.textDim)),
                 const SizedBox(height: 10),
                 Row(
                   children: [
@@ -480,7 +480,7 @@ class _DeviceTile extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right, color: KombuTheme.textDim),
+          const Icon(Icons.chevron_right, color: AppTheme.textDim),
         ],
       ),
     );
@@ -494,7 +494,7 @@ class _Chip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final c = on ? KombuTheme.accent : KombuTheme.textDim;
+    final c = on ? AppTheme.accent : AppTheme.textDim;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(

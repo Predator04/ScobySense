@@ -92,7 +92,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           currentVersion: '${info.version}+${info.buildNumber}',
         );
       }
-    } on KombuFailure catch (e) {
+    } on AppFailure catch (e) {
       _snack(e.message);
     } catch (e) {
       _snack(e.toString());
@@ -112,7 +112,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final build = _info?.buildNumber ?? '--';
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: KombuBackground(
+      body: AppBackground(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -129,8 +129,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(12),
                           gradient: const LinearGradient(colors: [
-                            KombuTheme.accent,
-                            KombuTheme.accent2,
+                            AppTheme.accent,
+                            AppTheme.accent2,
                           ]),
                         ),
                         child: const Icon(Icons.local_drink,
@@ -147,7 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     fontWeight: FontWeight.w700)),
                             Text('Version $version (build $build)',
                                 style: const TextStyle(
-                                    color: KombuTheme.textDim,
+                                    color: AppTheme.textDim,
                                     fontSize: 12)),
                           ],
                         ),
@@ -176,7 +176,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const Text(
                     'Updates download directly from GitHub releases. Android will show its standard install prompt.',
                     style: TextStyle(
-                        fontSize: 12, color: KombuTheme.textDim),
+                        fontSize: 12, color: AppTheme.textDim),
                   ),
                 ],
               ),
@@ -202,7 +202,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const Text(
                       'Device readings arrive in Fahrenheit (labelled "C" in firmware). Switching to Celsius converts for display only.',
                       style: TextStyle(
-                          fontSize: 12, color: KombuTheme.textDim)),
+                          fontSize: 12, color: AppTheme.textDim)),
                   const SizedBox(height: 18),
                   const Text('Time format',
                       style: TextStyle(fontWeight: FontWeight.w700)),
@@ -219,7 +219,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const Text(
                       'Applies to timers, batch history, and all other time displays.',
                       style: TextStyle(
-                          fontSize: 12, color: KombuTheme.textDim)),
+                          fontSize: 12, color: AppTheme.textDim)),
                 ],
               ),
             ),
@@ -240,9 +240,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                      'Local only, fires while ScobySense is running. The Kombu backend separately handles server-side push via Firebase.',
+                      'Local only, fires while ScobySense is running. The device backend separately handles server-side push via Firebase.',
                       style: TextStyle(
-                          fontSize: 12, color: KombuTheme.textDim)),
+                          fontSize: 12, color: AppTheme.textDim)),
                 ],
               ),
             ),
@@ -328,7 +328,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     width: double.infinity,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: KombuTheme.danger,
+                        backgroundColor: AppTheme.danger,
                         foregroundColor: Colors.white,
                       ),
                       icon: const Icon(Icons.logout),
@@ -358,11 +358,11 @@ class _Feature extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(icon, size: 16, color: KombuTheme.accent),
+          Icon(icon, size: 16, color: AppTheme.accent),
           const SizedBox(width: 10),
           Expanded(
             child: Text(text,
-                style: const TextStyle(fontSize: 13, color: KombuTheme.text)),
+                style: const TextStyle(fontSize: 13, color: AppTheme.text)),
           ),
         ],
       ),

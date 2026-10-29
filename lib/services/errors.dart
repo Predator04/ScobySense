@@ -1,34 +1,34 @@
-sealed class KombuFailure implements Exception {
+sealed class AppFailure implements Exception {
   final String message;
   final Object? cause;
-  const KombuFailure(this.message, [this.cause]);
+  const AppFailure(this.message, [this.cause]);
   @override
   String toString() => message;
 }
 
-class AuthFailure extends KombuFailure {
+class AuthFailure extends AppFailure {
   const AuthFailure(super.message, [super.cause]);
 }
 
-class NetworkFailure extends KombuFailure {
+class NetworkFailure extends AppFailure {
   const NetworkFailure(super.message, [super.cause]);
 }
 
-class ServerFailure extends KombuFailure {
+class ServerFailure extends AppFailure {
   final int? statusCode;
   const ServerFailure(String message, {this.statusCode, Object? cause})
       : super(message, cause);
 }
 
-class UpdateFailure extends KombuFailure {
+class UpdateFailure extends AppFailure {
   const UpdateFailure(super.message, [super.cause]);
 }
 
-class UpdateCancelled extends KombuFailure {
+class UpdateCancelled extends AppFailure {
   const UpdateCancelled() : super('Update cancelled.');
 }
 
-KombuFailure classifyHttpError(Object e, [StackTrace? st]) {
+AppFailure classifyHttpError(Object e, [StackTrace? st]) {
   final text = e.toString().toLowerCase();
   if (text.contains('socketexception') ||
       text.contains('handshake') ||

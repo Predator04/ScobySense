@@ -19,7 +19,7 @@ class TermsScreen extends StatelessWidget {
       Icons.flag_outlined,
       'Unofficial third-party app',
       'ScobySense is a community-built client. It is NOT affiliated with, '
-          'endorsed by, or supported by Kombu / The Fermenstation. All product '
+          'endorsed by, or supported by the device manufacturer. All product '
           'names, logos, and trademarks belong to their respective owners. '
           'Please do not contact them for help with it.',
     ),
@@ -93,15 +93,15 @@ class TermsScreen extends StatelessWidget {
     _Point(
       Icons.vpn_key_outlined,
       'Your account is your responsibility',
-      'You are responsible for your own Kombu account credentials, for '
+      'You are responsible for your own account credentials, for '
           'keeping them secure, and for all activity under your account. You '
-          'must also comply with Kombu / The Fermenstation\'s own terms of '
+          'must also comply with the device manufacturer\'s own terms of '
           'service.',
     ),
     _Point(
       Icons.cloud_queue,
-      'Dependent on Kombu\'s backend',
-      'ScobySense talks to Kombu\'s backend. If Kombu changes, throttles, or '
+      'Dependent on the device backend',
+      'ScobySense talks to the device backend. If it changes, throttles, or '
           'revokes access, the app may stop working at any time without '
           'notice, and the creator(s) have no obligation to restore service.',
     ),
@@ -131,7 +131,7 @@ class TermsScreen extends StatelessWidget {
           title: const Text('Terms & Disclaimer'),
           automaticallyImplyLeading: !requireAccept,
         ),
-        body: KombuBackground(
+        body: AppBackground(
           child: SafeArea(
             child: Column(
               children: [
@@ -146,7 +146,7 @@ class TermsScreen extends StatelessWidget {
                             Row(
                               children: [
                                 Icon(Icons.info_outline,
-                                    color: KombuTheme.accent, size: 18),
+                                    color: AppTheme.accent, size: 18),
                                 SizedBox(width: 8),
                                 Expanded(
                                   child: Text('Before you use ScobySense',
@@ -161,7 +161,7 @@ class TermsScreen extends StatelessWidget {
                                 'Please read these points. By continuing you '
                                 'confirm you understand and accept them.',
                                 style: TextStyle(
-                                    color: KombuTheme.textDim, fontSize: 13)),
+                                    color: AppTheme.textDim, fontSize: 13)),
                           ],
                         ),
                       ),
@@ -223,11 +223,11 @@ class _PointRow extends StatelessWidget {
           height: 36,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(10),
-            color: KombuTheme.accent.withValues(alpha: 0.12),
+            color: AppTheme.accent.withValues(alpha: 0.12),
             border:
-                Border.all(color: KombuTheme.accent.withValues(alpha: 0.3)),
+                Border.all(color: AppTheme.accent.withValues(alpha: 0.3)),
           ),
-          child: Icon(p.icon, size: 18, color: KombuTheme.accent),
+          child: Icon(p.icon, size: 18, color: AppTheme.accent),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -240,7 +240,7 @@ class _PointRow extends StatelessWidget {
               const SizedBox(height: 4),
               Text(p.body,
                   style: const TextStyle(
-                      color: KombuTheme.textDim,
+                      color: AppTheme.textDim,
                       fontSize: 13,
                       height: 1.4)),
             ],

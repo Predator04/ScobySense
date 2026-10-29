@@ -6,7 +6,7 @@ import 'prefs.dart';
 /// Local notifications wrapper.
 ///
 /// All deliveries happen on-device while the app is alive. The server-side
-/// push system used by the official Kombu app (Firebase Cloud Messaging) is
+/// push system used by the official app (Firebase Cloud Messaging) is
 /// intentionally out of scope.
 class NotificationService {
   NotificationService._();
@@ -62,7 +62,7 @@ class NotificationService {
   /// when a numeric threshold is crossed. Each rule has shape:
   /// `{side: F1|F2, metric: temperature|time, comparator: gt|lt|eq,
   ///   value: double, enabled: bool, label: String?}`.
-  Future<void> evaluate(KombuDevice device,
+  Future<void> evaluate(BrewerDevice device,
       {required List<Map<String, dynamic>> rules}) async {
     if (!await enabled) return;
     for (final r in rules) {
@@ -113,7 +113,7 @@ class NotificationService {
 
   /// Fire a one-shot notification when a brew timer completes (the
   /// `*RemainingTime` ISO timestamp has just passed).
-  Future<void> brewTimerDone(KombuDevice device, String side) async {
+  Future<void> brewTimerDone(BrewerDevice device, String side) async {
     final tag = 'timer:${device.deviceId}:$side';
     await _show(
       tag,

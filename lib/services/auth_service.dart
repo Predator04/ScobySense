@@ -43,7 +43,7 @@ class AuthService {
       final tokens = AuthTokens(id, access, refresh);
       await _save(email, tokens);
       return tokens;
-    } on KombuFailure {
+    } on AppFailure {
       rethrow;
     } on CognitoClientException catch (e) {
       final msg = e.message ?? e.code ?? 'Sign-in failed.';
@@ -113,7 +113,7 @@ class AuthService {
       final tokens = AuthTokens(id, access, newRefresh);
       await _save(email, tokens);
       return tokens;
-    } on KombuFailure {
+    } on AppFailure {
       rethrow;
     } on CognitoClientException catch (e) {
       throw AuthFailure(_prettyCognito(e.code, e.message ?? 'Refresh failed.'),

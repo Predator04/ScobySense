@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
         builder: (_) =>
             DevicesScreen(auth: widget.auth, updater: widget.updater),
       ));
-    } on KombuFailure catch (e) {
+    } on AppFailure catch (e) {
       setState(() => _error = e.message);
     } catch (e) {
       setState(() => _error = e.toString());
@@ -57,7 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: KombuBackground(
+      body: AppBackground(
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
@@ -78,12 +78,12 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(14),
                               gradient: const LinearGradient(colors: [
-                                KombuTheme.accent,
-                                KombuTheme.accent2,
+                                AppTheme.accent,
+                                AppTheme.accent2,
                               ]),
                               boxShadow: [
                                 BoxShadow(
-                                  color: KombuTheme.accent
+                                  color: AppTheme.accent
                                       .withValues(alpha: 0.3),
                                   blurRadius: 16,
                                   spreadRadius: -2,
@@ -104,7 +104,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         fontWeight: FontWeight.w700)),
                                 Text('Kombucha brewer companion',
                                     style: TextStyle(
-                                        color: KombuTheme.textDim,
+                                        color: AppTheme.textDim,
                                         fontSize: 13)),
                               ],
                             ),
@@ -132,21 +132,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: KombuTheme.danger.withValues(alpha: 0.1),
+                            color: AppTheme.danger.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(10),
                             border: Border.all(
                                 color:
-                                    KombuTheme.danger.withValues(alpha: 0.3)),
+                                    AppTheme.danger.withValues(alpha: 0.3)),
                           ),
                           child: Row(
                             children: [
                               const Icon(Icons.error_outline,
-                                  color: KombuTheme.danger, size: 16),
+                                  color: AppTheme.danger, size: 16),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(_error!,
                                     style: const TextStyle(
-                                        color: KombuTheme.danger,
+                                        color: AppTheme.danger,
                                         fontSize: 13)),
                               ),
                             ],
@@ -167,9 +167,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 12),
                       const Text(
-                        'Uses your Kombu (thekombu.com) account. Credentials go only to Amazon Cognito.',
+                        'Uses your account from the official app. Credentials go only to Amazon Cognito.',
                         style: TextStyle(
-                            fontSize: 12, color: KombuTheme.textDim),
+                            fontSize: 12, color: AppTheme.textDim),
                         textAlign: TextAlign.center,
                       ),
                     ],

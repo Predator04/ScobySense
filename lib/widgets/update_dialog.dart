@@ -65,7 +65,7 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
     } on UpdateCancelled {
       if (!mounted) return;
       Navigator.of(context).pop();
-    } on KombuFailure catch (e) {
+    } on AppFailure catch (e) {
       if (!mounted) return;
       setState(() {
         _state = _UpdateUiState.failed;
@@ -117,7 +117,7 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               gradient: const LinearGradient(
-                colors: [KombuTheme.accent, KombuTheme.accent2],
+                colors: [AppTheme.accent, AppTheme.accent2],
               ),
             ),
             child: const Icon(Icons.download, color: Color(0xFF04070A)),
@@ -134,13 +134,13 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
-            color: KombuTheme.accent,
+            color: AppTheme.accent,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           'Size: ${DownloadProgress.formatBytes(widget.release.apkSize)}',
-          style: const TextStyle(color: KombuTheme.textDim, fontSize: 12),
+          style: const TextStyle(color: AppTheme.textDim, fontSize: 12),
         ),
         if ((widget.release.bodyNotes ?? '').trim().isNotEmpty) ...[
           const SizedBox(height: 14),
@@ -157,7 +157,7 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
               child: Text(
                 widget.release.bodyNotes!.trim(),
                 style: const TextStyle(
-                    fontSize: 12, color: KombuTheme.textDim, height: 1.4),
+                    fontSize: 12, color: AppTheme.textDim, height: 1.4),
               ),
             ),
           ),
@@ -194,7 +194,7 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(children: const [
-          Icon(Icons.downloading, color: KombuTheme.accent),
+          Icon(Icons.downloading, color: AppTheme.accent),
           SizedBox(width: 10),
           Text('Downloading update',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
@@ -205,7 +205,7 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
           child: LinearProgressIndicator(
             value: p.total > 0 ? p.fraction : null,
             minHeight: 10,
-            color: KombuTheme.accent,
+            color: AppTheme.accent,
             backgroundColor: Colors.white.withValues(alpha: 0.08),
           ),
         ),
@@ -214,10 +214,10 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('$receivedStr / $totalStr',
-                style: const TextStyle(fontSize: 12, color: KombuTheme.text)),
+                style: const TextStyle(fontSize: 12, color: AppTheme.text)),
             Text(
               p.total > 0 ? '${(p.fraction * 100).toStringAsFixed(1)}%' : '--',
-              style: const TextStyle(fontSize: 12, color: KombuTheme.accent),
+              style: const TextStyle(fontSize: 12, color: AppTheme.accent),
             ),
           ],
         ),
@@ -226,19 +226,19 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Row(children: [
-              const Icon(Icons.speed, size: 14, color: KombuTheme.textDim),
+              const Icon(Icons.speed, size: 14, color: AppTheme.textDim),
               const SizedBox(width: 4),
               Text(DownloadProgress.formatSpeed(p.bytesPerSec),
                   style: const TextStyle(
-                      fontSize: 12, color: KombuTheme.textDim)),
+                      fontSize: 12, color: AppTheme.textDim)),
             ]),
             Row(children: [
               const Icon(Icons.timer_outlined,
-                  size: 14, color: KombuTheme.textDim),
+                  size: 14, color: AppTheme.textDim),
               const SizedBox(width: 4),
               Text('ETA ${DownloadProgress.formatEta(p.eta)}',
                   style: const TextStyle(
-                      fontSize: 12, color: KombuTheme.textDim)),
+                      fontSize: 12, color: AppTheme.textDim)),
             ]),
           ],
         ),
@@ -261,7 +261,7 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(children: const [
-          Icon(Icons.check_circle, color: KombuTheme.accent),
+          Icon(Icons.check_circle, color: AppTheme.accent),
           SizedBox(width: 10),
           Text('Install ready',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
@@ -269,7 +269,7 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
         const SizedBox(height: 12),
         const Text(
           'Confirm the Android install prompt to finish updating. If it did not appear, allow "install unknown apps" for ScobySense in system settings and retry.',
-          style: TextStyle(fontSize: 13, color: KombuTheme.textDim),
+          style: TextStyle(fontSize: 13, color: AppTheme.textDim),
         ),
         const SizedBox(height: 20),
         Align(
@@ -289,14 +289,14 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(children: const [
-          Icon(Icons.error_outline, color: KombuTheme.danger),
+          Icon(Icons.error_outline, color: AppTheme.danger),
           SizedBox(width: 10),
           Text('Update failed',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
         ]),
         const SizedBox(height: 10),
         Text(_error ?? 'Unknown error.',
-            style: const TextStyle(fontSize: 13, color: KombuTheme.textDim)),
+            style: const TextStyle(fontSize: 13, color: AppTheme.textDim)),
         const SizedBox(height: 20),
         Row(
           children: [

@@ -1,4 +1,4 @@
-class KombuDevice {
+class BrewerDevice {
   final String id;
   final String deviceId;
   final String? deviceName;
@@ -15,7 +15,7 @@ class KombuDevice {
   final String? lastSeen;
   final String? iotThingArn;
 
-  KombuDevice({
+  BrewerDevice({
     required this.id,
     required this.deviceId,
     this.deviceName,
@@ -33,7 +33,7 @@ class KombuDevice {
     this.iotThingArn,
   });
 
-  factory KombuDevice.fromJson(Map<String, dynamic> j) => KombuDevice(
+  factory BrewerDevice.fromJson(Map<String, dynamic> j) => BrewerDevice(
         id: (j['id'] ?? j['deviceId'] ?? '').toString(),
         deviceId: (j['deviceId'] ?? '').toString(),
         deviceName: j['deviceName'] as String?,

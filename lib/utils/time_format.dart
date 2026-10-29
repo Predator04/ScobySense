@@ -1,7 +1,7 @@
 import 'package:intl/intl.dart';
 
-DateFormat kombuDateTimeFormat(bool use24Hour) =>
+DateFormat appDateTimeFormat(bool use24Hour) =>
     use24Hour ? DateFormat('MMM d, HH:mm') : DateFormat('MMM d, h:mm a');
 
-String formatKombuDateTime(DateTime d, bool use24Hour) =>
-    kombuDateTimeFormat(use24Hour).format(d);
+String formatAppDateTime(DateTime d, bool use24Hour) =>
+    appDateTimeFormat(use24Hour).format(d);

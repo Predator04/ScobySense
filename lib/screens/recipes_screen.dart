@@ -89,13 +89,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: KombuTheme.bg2,
+        backgroundColor: AppTheme.bg2,
         title: const Text('Delete recipe?'),
         content: Text(
           isCustom
               ? 'Delete your custom recipe "$title"? This can\'t be undone.'
               : 'Hide the built-in recipe "$title" from your list? You can get it back by reinstalling or clearing app data.',
-          style: const TextStyle(color: KombuTheme.text),
+          style: const TextStyle(color: AppTheme.text),
         ),
         actions: [
           TextButton(
@@ -103,7 +103,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: KombuTheme.danger),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.danger),
             onPressed: () => Navigator.pop(ctx, true),
             child: const Text('Delete'),
           ),
@@ -123,7 +123,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
   Future<void> _openManageCategories() async {
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: KombuTheme.bg2,
+      backgroundColor: AppTheme.bg2,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
@@ -141,24 +141,24 @@ class _RecipesScreenState extends State<RecipesScreen> {
           ? null
           : FloatingActionButton.extended(
               onPressed: _openAdd,
-              backgroundColor: KombuTheme.accent,
+              backgroundColor: AppTheme.accent,
               foregroundColor: const Color(0xFF04070A),
               icon: const Icon(Icons.add),
               label: const Text('Add recipe',
                   style: TextStyle(fontWeight: FontWeight.w700)),
             ),
-      body: KombuBackground(
+      body: AppBackground(
         child: _loading
             ? const Center(
                 child:
-                    CircularProgressIndicator(color: KombuTheme.accent))
+                    CircularProgressIndicator(color: AppTheme.accent))
             : _error != null
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: GlassCard(
                         child: Text(_error!,
-                            style: const TextStyle(color: KombuTheme.danger)),
+                            style: const TextStyle(color: AppTheme.danger)),
                       ),
                     ),
                   )
@@ -198,10 +198,10 @@ class _RecipesScreenState extends State<RecipesScreen> {
                               child: TextButton.icon(
                                 onPressed: _openManageCategories,
                                 icon: const Icon(Icons.edit_outlined,
-                                    size: 16, color: KombuTheme.accent),
+                                    size: 16, color: AppTheme.accent),
                                 label: const Text('Manage',
                                     style: TextStyle(
-                                        color: KombuTheme.accent,
+                                        color: AppTheme.accent,
                                         fontWeight: FontWeight.w600,
                                         fontSize: 12)),
                               ),
@@ -243,19 +243,19 @@ class _RecipesScreenState extends State<RecipesScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
             color: active
-                ? KombuTheme.accent.withValues(alpha: 0.18)
+                ? AppTheme.accent.withValues(alpha: 0.18)
                 : Colors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(999),
             border: Border.all(
               color: active
-                  ? KombuTheme.accent
+                  ? AppTheme.accent
                   : Colors.white.withValues(alpha: 0.1),
             ),
           ),
           child: Text(label,
               style: TextStyle(
                 color:
-                    active ? KombuTheme.accent : KombuTheme.text,
+                    active ? AppTheme.accent : AppTheme.text,
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
               )),
@@ -315,7 +315,7 @@ class _ManageCategoriesSheetState extends State<_ManageCategoriesSheet> {
     final result = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: KombuTheme.bg2,
+        backgroundColor: AppTheme.bg2,
         title: const Text('Rename category'),
         content: TextField(
           controller: ctl,
@@ -365,7 +365,7 @@ class _ManageCategoriesSheetState extends State<_ManageCategoriesSheet> {
                   ),
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close, color: KombuTheme.textDim),
+                    icon: const Icon(Icons.close, color: AppTheme.textDim),
                   ),
                 ],
               ),
@@ -395,14 +395,14 @@ class _ManageCategoriesSheetState extends State<_ManageCategoriesSheet> {
                 const Padding(
                   padding: EdgeInsets.all(16),
                   child: Center(
-                    child: CircularProgressIndicator(color: KombuTheme.accent),
+                    child: CircularProgressIndicator(color: AppTheme.accent),
                   ),
                 )
               else if (_cats.isEmpty)
                 const Padding(
                   padding: EdgeInsets.all(12),
                   child: Text('No categories yet.',
-                      style: TextStyle(color: KombuTheme.textDim)),
+                      style: TextStyle(color: AppTheme.textDim)),
                 )
               else
                 ConstrainedBox(
@@ -421,11 +421,11 @@ class _ManageCategoriesSheetState extends State<_ManageCategoriesSheet> {
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
                         title: Text(c,
-                            style: const TextStyle(color: KombuTheme.text)),
+                            style: const TextStyle(color: AppTheme.text)),
                         trailing: IconButton(
                           tooltip: 'Rename',
                           icon: const Icon(Icons.edit_outlined,
-                              color: KombuTheme.accent, size: 20),
+                              color: AppTheme.accent, size: 20),
                           onPressed: _busy ? null : () => _rename(c),
                         ),
                       );
@@ -485,15 +485,15 @@ class _RecipeCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: KombuTheme.accent.withValues(alpha: 0.15),
+                          color: AppTheme.accent.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(999),
                           border: Border.all(
                               color:
-                                  KombuTheme.accent.withValues(alpha: 0.4)),
+                                  AppTheme.accent.withValues(alpha: 0.4)),
                         ),
                         child: const Text('custom',
                             style: TextStyle(
-                                color: KombuTheme.accent, fontSize: 10)),
+                                color: AppTheme.accent, fontSize: 10)),
                       ),
                     if (displayTag != null)
                       Container(
@@ -501,12 +501,12 @@ class _RecipeCard extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: KombuTheme.accent2.withValues(alpha: 0.15),
+                          color: AppTheme.accent2.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(displayTag!,
                             style: const TextStyle(
-                                color: KombuTheme.accent2, fontSize: 10)),
+                                color: AppTheme.accent2, fontSize: 10)),
                       ),
                   ],
                 ),
@@ -514,12 +514,12 @@ class _RecipeCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(data['summary'] as String,
                       style: const TextStyle(
-                          color: KombuTheme.textDim, fontSize: 13)),
+                          color: AppTheme.textDim, fontSize: 13)),
                 ],
                 const SizedBox(height: 6),
                 const Text('Open recipe →',
                     style: TextStyle(
-                        color: KombuTheme.accent,
+                        color: AppTheme.accent,
                         fontSize: 12,
                         fontWeight: FontWeight.w600)),
               ],
@@ -528,16 +528,16 @@ class _RecipeCard extends StatelessWidget {
           IconButton(
             tooltip: 'Edit recipe',
             icon: const Icon(Icons.edit_outlined,
-                color: KombuTheme.accent, size: 20),
+                color: AppTheme.accent, size: 20),
             onPressed: onEdit,
           ),
           IconButton(
             tooltip: 'Delete recipe',
             icon: const Icon(Icons.delete_outline,
-                color: KombuTheme.danger, size: 20),
+                color: AppTheme.danger, size: 20),
             onPressed: onDelete,
           ),
-          const Icon(Icons.chevron_right, color: KombuTheme.textDim),
+          const Icon(Icons.chevron_right, color: AppTheme.textDim),
         ],
       ),
     );
@@ -554,7 +554,7 @@ class _RecipeDetail extends StatelessWidget {
     final hasSoda = soda is Map<String, dynamic>;
     return Scaffold(
       appBar: AppBar(title: Text(data['title']?.toString() ?? 'Recipe')),
-      body: KombuBackground(
+      body: AppBackground(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -594,13 +594,13 @@ class _RecipeBlock extends StatelessWidget {
           ],
           if (data['summary'] != null) ...[
             Text(data['summary'] as String,
-                style: const TextStyle(color: KombuTheme.textDim)),
+                style: const TextStyle(color: AppTheme.textDim)),
             const SizedBox(height: 8),
           ],
           if (subtitle != null) ...[
             Text(subtitle,
                 style: const TextStyle(
-                    color: KombuTheme.textDim,
+                    color: AppTheme.textDim,
                     fontStyle: FontStyle.italic,
                     fontSize: 13)),
             const SizedBox(height: 8),
@@ -609,11 +609,11 @@ class _RecipeBlock extends StatelessWidget {
             Row(
               children: [
                 const Icon(Icons.thermostat,
-                    size: 16, color: KombuTheme.accent),
+                    size: 16, color: AppTheme.accent),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text('Ferment ${data['ferment_temp']}',
-                      style: const TextStyle(color: KombuTheme.accent)),
+                      style: const TextStyle(color: AppTheme.accent)),
                 ),
               ],
             ),
@@ -633,7 +633,7 @@ class _RecipeBlock extends StatelessWidget {
                     Expanded(
                       flex: 5,
                       child: Text(it['name']?.toString() ?? '',
-                          style: const TextStyle(color: KombuTheme.text)),
+                          style: const TextStyle(color: AppTheme.text)),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -641,7 +641,7 @@ class _RecipeBlock extends StatelessWidget {
                       child: Text(it['amount']?.toString() ?? '',
                           textAlign: TextAlign.right,
                           style: const TextStyle(
-                              color: KombuTheme.textDim)),
+                              color: AppTheme.textDim)),
                     ),
                   ],
                 ),
@@ -658,7 +658,7 @@ class _RecipeBlock extends StatelessWidget {
                 children: [
                   Text('${i + 1}.',
                       style: const TextStyle(
-                          color: KombuTheme.accent,
+                          color: AppTheme.accent,
                           fontWeight: FontWeight.w600)),
                   const SizedBox(width: 8),
                   Expanded(child: Text(steps[i])),
@@ -673,7 +673,7 @@ class _RecipeBlock extends StatelessWidget {
                 style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
             Text(data['prep_tips'] as String,
-                style: const TextStyle(color: KombuTheme.textDim)),
+                style: const TextStyle(color: AppTheme.textDim)),
           ],
           if (data['warning_signs'] != null) ...[
             const SizedBox(height: 12),
@@ -681,7 +681,7 @@ class _RecipeBlock extends StatelessWidget {
                 style: TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 4),
             Text(data['warning_signs'] as String,
-                style: const TextStyle(color: KombuTheme.accent2)),
+                style: const TextStyle(color: AppTheme.accent2)),
           ],
         ],
       ),

@@ -25,8 +25,8 @@ class DeviceSubscriptionClient {
   bool _closed = false;
   int _backoffMs = 2000;
 
-  final _controller = StreamController<KombuDevice>.broadcast();
-  Stream<KombuDevice> get updates => _controller.stream;
+  final _controller = StreamController<BrewerDevice>.broadcast();
+  Stream<BrewerDevice> get updates => _controller.stream;
 
   DeviceSubscriptionClient(this.auth);
 
@@ -168,7 +168,7 @@ class DeviceSubscriptionClient {
     final devJson = data['onUpdateDevice'];
     if (devJson is! Map<String, dynamic>) return;
     try {
-      _controller.add(KombuDevice.fromJson(devJson));
+      _controller.add(BrewerDevice.fromJson(devJson));
     } catch (_) {}
   }
 

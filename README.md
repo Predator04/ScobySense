@@ -1,12 +1,12 @@
 # ScobySense
 
-A community-built Android companion for the **Fermenstation (KOMBU)** kombucha brewer — live brew read-out, full device control, and an in-app recipe library, in a clean glass UI.
+A community-built Android companion for the **Fermenstation** kombucha brewer — live brew read-out, full device control, and an in-app recipe library, in a clean glass UI.
 
-> **Unofficial.** ScobySense is not made by, endorsed by, or affiliated with Kombu / The Fermenstation. It talks to the same AWS backend the official app uses, using your own account. It can break if that backend changes.
+> **Unofficial.** ScobySense is not made by, endorsed by, or affiliated with the device manufacturer. It talks to the same AWS backend the official app uses, using your own account. It can break if that backend changes.
 
 ## Features
 
-- **Sign in with your KOMBU account** — credentials go only to Amazon Cognito; login is saved securely and auto-refreshes.
+- **Sign in with your account** — credentials go only to Amazon Cognito; login is saved securely and auto-refreshes.
 - **Live F1 / F2 read-out** — real-time temperatures and remaining brew time for both fermenters, plus brew-cycle history and batch tracking.
 - **Full device control** — set a brew timer in **days, hours, or minutes**, toggle the sound, and turn a fermenter off, all from the app.
 - **Recipes** — built-in kombucha and soda recipes plus your own. Add, edit, and remove recipes, and manage the category tabs (add/rename). Dual-unit measurements (metric / US).
@@ -22,7 +22,7 @@ Download the latest APK from **[Releases](https://github.com/Predator04/ScobySen
 1. Download `ScobySense-vX.Y.Z.apk`.
 2. Open it on your phone and allow "install unknown apps" when prompted.
 
-You need a Fermenstation device already paired in the **official KOMBU app** before ScobySense can see it.
+You need a Fermenstation device already paired in the **official app** before ScobySense can see it.
 
 ## Privacy
 
@@ -46,6 +46,6 @@ keyAlias=scobysense
 
 ## Legal
 
-ScobySense is an independent, third-party client. "KOMBU" and "Fermenstation" are trademarks of their respective owners and are used here only to identify the compatible hardware. This project provides no warranty; use at your own risk, and comply with the device manufacturer's own terms.
+ScobySense is an independent, third-party client. "Fermenstation" is a trademark of its respective owner and is used here only to identify the compatible hardware. This project provides no warranty; use at your own risk, and comply with the device manufacturer's own terms.
 
 If you are the rights holder and would like this project removed, open an issue at <https://github.com/Predator04/ScobySense/issues> and it will be taken down.

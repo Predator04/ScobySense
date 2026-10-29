@@ -23,7 +23,7 @@ import '../widgets/update_dialog.dart';
 class DeviceScreen extends StatefulWidget {
   final AuthService auth;
   final UpdateService updater;
-  final KombuDevice initial;
+  final BrewerDevice initial;
   const DeviceScreen({
     super.key,
     required this.auth,
@@ -40,9 +40,9 @@ class _DeviceScreenState extends State<DeviceScreen> {
   late final CommandService _cmd = CommandService(_client);
   late final DeviceSubscriptionClient _sub =
       DeviceSubscriptionClient(widget.auth);
-  StreamSubscription<KombuDevice>? _subListen;
+  StreamSubscription<BrewerDevice>? _subListen;
   final _history = HistoryStore();
-  late KombuDevice _device = widget.initial;
+  late BrewerDevice _device = widget.initial;
   Timer? _poll;
   Timer? _ticker;
   bool _liveConnected = false;
@@ -86,7 +86,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
     if (mounted) setState(() => _liveConnected = true);
   }
 
-  void _onLiveUpdate(KombuDevice d) {
+  void _onLiveUpdate(BrewerDevice d) {
     if (d.deviceId != _device.deviceId) return;
     final sample = TempSample(
       ts: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -105,7 +105,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
     });
   }
 
-  void _checkNotifications(KombuDevice d) {
+  void _checkNotifications(BrewerDevice d) {
     NotificationService.instance.evaluate(d, rules: _alertRules);
     DateTime? parse(String? iso) =>
         (iso == null || iso.isEmpty) ? null : DateTime.tryParse(iso);
@@ -222,7 +222,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
         _samples = hist;
         _err = null;
       });
-    } on KombuFailure catch (e) {
+    } on AppFailure catch (e) {
       if (!mounted) return;
       setState(() => _err = e.message);
     } catch (e) {
@@ -241,7 +241,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
       await op();
       if (!mounted) return;
       setState(() => _ack = '$label sent');
-    } on KombuFailure catch (e) {
+    } on AppFailure catch (e) {
       if (!mounted) return;
       setState(() => _err = '$label: ${e.message}');
     } catch (e) {
@@ -302,10 +302,10 @@ class _DeviceScreenState extends State<DeviceScreen> {
               icon: const Icon(Icons.refresh))
         ],
       ),
-      body: KombuBackground(
+      body: AppBackground(
         child: RefreshIndicator(
           onRefresh: _refresh,
-          color: KombuTheme.accent,
+          color: AppTheme.accent,
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
@@ -325,12 +325,12 @@ class _DeviceScreenState extends State<DeviceScreen> {
                     child: Row(
                       children: [
                         const Icon(Icons.check_circle,
-                            color: KombuTheme.accent, size: 18),
+                            color: AppTheme.accent, size: 18),
                         const SizedBox(width: 8),
                         Expanded(
                           child: Text('ACK: $_ack',
                               style:
-                                  const TextStyle(color: KombuTheme.accent)),
+                                  const TextStyle(color: AppTheme.accent)),
                         ),
                       ],
                     ),
@@ -354,7 +354,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
     final result = await showDialog<String?>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: KombuTheme.bg2,
+        backgroundColor: AppTheme.bg2,
         title: const Text('Rename device'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
@@ -372,8 +372,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Stored on this device only — does not change the name on Kombu\'s servers.',
-              style: TextStyle(color: KombuTheme.textDim, fontSize: 12),
+              'Stored on this device only — does not change the name on the device servers.',
+              style: TextStyle(color: AppTheme.textDim, fontSize: 12),
             ),
           ],
         ),
@@ -412,7 +412,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
     await showModalBottomSheet<void>(
       context: context,
-      backgroundColor: KombuTheme.bg2,
+      backgroundColor: AppTheme.bg2,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -439,12 +439,12 @@ class _DeviceScreenState extends State<DeviceScreen> {
                     height: 32,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
-                      color: KombuTheme.accent.withValues(alpha: 0.14),
+                      color: AppTheme.accent.withValues(alpha: 0.14),
                       border: Border.all(
-                          color: KombuTheme.accent.withValues(alpha: 0.4)),
+                          color: AppTheme.accent.withValues(alpha: 0.4)),
                     ),
                     child: const Icon(Icons.timer_outlined,
-                        color: KombuTheme.accent, size: 18),
+                        color: AppTheme.accent, size: 18),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -460,7 +460,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
               Text(
                 'Currently saved: ${_humanizeDuration(currentSeconds)}',
                 style: const TextStyle(
-                    color: KombuTheme.textDim, fontSize: 12),
+                    color: AppTheme.textDim, fontSize: 12),
               ),
               const SizedBox(height: 16),
               _DurationStepper(
@@ -493,9 +493,9 @@ class _DeviceScreenState extends State<DeviceScreen> {
                     horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  color: KombuTheme.accent.withValues(alpha: 0.08),
+                  color: AppTheme.accent.withValues(alpha: 0.08),
                   border: Border.all(
-                      color: KombuTheme.accent.withValues(alpha: 0.3)),
+                      color: AppTheme.accent.withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   canStart
@@ -504,8 +504,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
                       : 'Set at least 1 minute to start a brew',
                   style: TextStyle(
                     color: canStart
-                        ? KombuTheme.accent
-                        : KombuTheme.textDim,
+                        ? AppTheme.accent
+                        : AppTheme.textDim,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -528,11 +528,11 @@ class _DeviceScreenState extends State<DeviceScreen> {
                         );
                         setState(() => _ack = '$side turned off');
                         await _refresh();
-                      } on KombuFailure catch (e) {
+                      } on AppFailure catch (e) {
                         if (!mounted) return;
                         messenger.showSnackBar(
                           SnackBar(
-                            backgroundColor: KombuTheme.danger,
+                            backgroundColor: AppTheme.danger,
                             content:
                                 Text('$side turn off failed: ${e.message}'),
                           ),
@@ -542,7 +542,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                         if (!mounted) return;
                         messenger.showSnackBar(
                           SnackBar(
-                            backgroundColor: KombuTheme.danger,
+                            backgroundColor: AppTheme.danger,
                             content: Text('$side turn off failed: $e'),
                           ),
                         );
@@ -550,12 +550,12 @@ class _DeviceScreenState extends State<DeviceScreen> {
                       }
                     },
                     icon: const Icon(Icons.power_settings_new,
-                        color: KombuTheme.danger, size: 18),
+                        color: AppTheme.danger, size: 18),
                     label: const Text('Turn off',
-                        style: TextStyle(color: KombuTheme.danger)),
+                        style: TextStyle(color: AppTheme.danger)),
                     style: OutlinedButton.styleFrom(
                       side: BorderSide(
-                          color: KombuTheme.danger.withValues(alpha: 0.6)),
+                          color: AppTheme.danger.withValues(alpha: 0.6)),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
@@ -604,11 +604,11 @@ class _DeviceScreenState extends State<DeviceScreen> {
                                 );
                                 setState(() =>
                                     _ack = '$side brew $human sent');
-                              } on KombuFailure catch (e) {
+                              } on AppFailure catch (e) {
                                 if (!mounted) return;
                                 messenger.showSnackBar(
                                   SnackBar(
-                                    backgroundColor: KombuTheme.danger,
+                                    backgroundColor: AppTheme.danger,
                                     content: Text(
                                         '$side brew failed: ${e.message}'),
                                   ),
@@ -619,7 +619,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                                 if (!mounted) return;
                                 messenger.showSnackBar(
                                   SnackBar(
-                                    backgroundColor: KombuTheme.danger,
+                                    backgroundColor: AppTheme.danger,
                                     content: Text('$side brew failed: $e'),
                                   ),
                                 );
@@ -660,11 +660,11 @@ class _DeviceScreenState extends State<DeviceScreen> {
       if (iso == null || iso.isEmpty) return '--';
       final d = DateTime.tryParse(iso);
       if (d == null) return iso;
-      return formatKombuDateTime(d.toLocal(), _use24Hour);
+      return formatAppDateTime(d.toLocal(), _use24Hour);
     }
 
     final online = (_device.status ?? '').toLowerCase() == 'online';
-    final statusColor = online ? KombuTheme.accent : KombuTheme.accent2;
+    final statusColor = online ? AppTheme.accent : AppTheme.accent2;
 
     return GlassCard(
       child: Column(
@@ -679,19 +679,19 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
-                  color: KombuTheme.accent.withValues(alpha: 0.14),
+                  color: AppTheme.accent.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                      color: KombuTheme.accent.withValues(alpha: 0.4)),
+                      color: AppTheme.accent.withValues(alpha: 0.4)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: const [
-                    Icon(Icons.circle, size: 7, color: KombuTheme.accent),
+                    Icon(Icons.circle, size: 7, color: AppTheme.accent),
                     SizedBox(width: 4),
                     Text('LIVE',
                         style: TextStyle(
-                            color: KombuTheme.accent,
+                            color: AppTheme.accent,
                             fontSize: 9,
                             letterSpacing: 0.6,
                             fontWeight: FontWeight.w700)),
@@ -809,12 +809,12 @@ class _DeviceScreenState extends State<DeviceScreen> {
       padding: const EdgeInsets.only(top: 6, bottom: 2),
       child: Row(
         children: [
-          const Icon(Icons.schedule, size: 14, color: KombuTheme.textDim),
+          const Icon(Icons.schedule, size: 14, color: AppTheme.textDim),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
               text,
-              style: const TextStyle(fontSize: 12, color: KombuTheme.textDim),
+              style: const TextStyle(fontSize: 12, color: AppTheme.textDim),
               overflow: TextOverflow.ellipsis,
             ),
           ),
@@ -828,7 +828,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
         children: [
-          Text(k, style: const TextStyle(color: KombuTheme.textDim)),
+          Text(k, style: const TextStyle(color: AppTheme.textDim)),
           const Spacer(),
           Flexible(
               child: Text(v,
@@ -879,12 +879,12 @@ class _DeviceScreenState extends State<DeviceScreen> {
                     height: 34,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
-                      color: KombuTheme.accent.withValues(alpha: 0.14),
+                      color: AppTheme.accent.withValues(alpha: 0.14),
                       border: Border.all(
-                          color: KombuTheme.accent.withValues(alpha: 0.4)),
+                          color: AppTheme.accent.withValues(alpha: 0.4)),
                     ),
                     child: const Icon(Icons.system_update_alt,
-                        color: KombuTheme.accent, size: 18),
+                        color: AppTheme.accent, size: 18),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -894,7 +894,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                         Text(
                           'Update available — v${release.version}',
                           style: const TextStyle(
-                              color: KombuTheme.accent,
+                              color: AppTheme.accent,
                               fontSize: 13,
                               fontWeight: FontWeight.w700),
                         ),
@@ -902,7 +902,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                         const Text(
                           'tap to download',
                           style: TextStyle(
-                              color: KombuTheme.textDim, fontSize: 11),
+                              color: AppTheme.textDim, fontSize: 11),
                         ),
                       ],
                     ),
@@ -910,7 +910,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                   IconButton(
                     tooltip: 'Dismiss',
                     icon: const Icon(Icons.close,
-                        color: KombuTheme.textDim, size: 18),
+                        color: AppTheme.textDim, size: 18),
                     onPressed: () =>
                         setState(() => _updateBannerDismissed = true),
                   ),
@@ -935,7 +935,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
               'v$version',
               style: TextStyle(
                 fontSize: 11,
-                color: KombuTheme.textDim.withValues(alpha: 0.6),
+                color: AppTheme.textDim.withValues(alpha: 0.6),
                 letterSpacing: 0.3,
               ),
             ),
@@ -1007,7 +1007,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
   Widget _dangerBtn(String label, VoidCallback onTap) => ElevatedButton(
         onPressed: _busy ? null : onTap,
         style: ElevatedButton.styleFrom(
-          backgroundColor: KombuTheme.danger,
+          backgroundColor: AppTheme.danger,
           foregroundColor: Colors.white,
         ),
         child: Text(label),
@@ -1044,14 +1044,14 @@ class _DeviceScreenState extends State<DeviceScreen> {
                   if (f1.isNotEmpty)
                     LineChartBarData(
                       spots: f1,
-                      color: KombuTheme.accent2,
+                      color: AppTheme.accent2,
                       barWidth: 2,
                       dotData: const FlDotData(show: false),
                     ),
                   if (f2.isNotEmpty)
                     LineChartBarData(
                       spots: f2,
-                      color: KombuTheme.accent,
+                      color: AppTheme.accent,
                       barWidth: 2,
                       dotData: const FlDotData(show: false),
                     ),
@@ -1061,9 +1061,9 @@ class _DeviceScreenState extends State<DeviceScreen> {
           ),
           const SizedBox(height: 8),
           Row(children: const [
-            _LegendDot(c: KombuTheme.accent2, label: 'F1'),
+            _LegendDot(c: AppTheme.accent2, label: 'F1'),
             SizedBox(width: 12),
-            _LegendDot(c: KombuTheme.accent, label: 'F2'),
+            _LegendDot(c: AppTheme.accent, label: 'F2'),
           ]),
         ],
       ),
@@ -1098,8 +1098,8 @@ class _StatBlock extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: accent
               ? [
-                  KombuTheme.accent.withValues(alpha: 0.14),
-                  KombuTheme.accent.withValues(alpha: 0.04),
+                  AppTheme.accent.withValues(alpha: 0.14),
+                  AppTheme.accent.withValues(alpha: 0.04),
                 ]
               : [
                   Colors.white.withValues(alpha: 0.04),
@@ -1109,7 +1109,7 @@ class _StatBlock extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
             color: accent
-                ? KombuTheme.accent.withValues(alpha: 0.3)
+                ? AppTheme.accent.withValues(alpha: 0.3)
                 : Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
@@ -1119,7 +1119,7 @@ class _StatBlock extends StatelessWidget {
             children: [
               Text(label,
                   style: const TextStyle(
-                      color: KombuTheme.textDim,
+                      color: AppTheme.textDim,
                       fontSize: 12,
                       fontWeight: FontWeight.w600)),
               if (onTap != null) ...[
@@ -1127,7 +1127,7 @@ class _StatBlock extends StatelessWidget {
                 Icon(Icons.edit_calendar_outlined,
                     size: 14,
                     color:
-                        KombuTheme.textDim.withValues(alpha: 0.8)),
+                        AppTheme.textDim.withValues(alpha: 0.8)),
               ],
             ],
           ),
@@ -1140,13 +1140,13 @@ class _StatBlock extends StatelessWidget {
                   fontSize: 11,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
-                  color: accent ? KombuTheme.accent : KombuTheme.textDim)),
+                  color: accent ? AppTheme.accent : AppTheme.textDim)),
           if (footer != null) ...[
             const SizedBox(height: 6),
             Text(footer!,
                 style: const TextStyle(
                     fontSize: 10.5,
-                    color: KombuTheme.textDim,
+                    color: AppTheme.textDim,
                     letterSpacing: 0.2)),
           ],
         ],
@@ -1212,7 +1212,7 @@ class _Recipes3DButtonState extends State<_Recipes3DButton> {
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
-                color: KombuTheme.accent.withValues(alpha: _pressed ? 0.18 : 0.35),
+                color: AppTheme.accent.withValues(alpha: _pressed ? 0.18 : 0.35),
                 blurRadius: _pressed ? 14 : 30,
                 spreadRadius: -4,
                 offset: Offset(0, _pressed ? 4 : 14),
@@ -1240,14 +1240,14 @@ class _Recipes3DButtonState extends State<_Recipes3DButton> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      KombuTheme.accent.withValues(alpha: 0.28),
-                      KombuTheme.accent2.withValues(alpha: 0.22),
+                      AppTheme.accent.withValues(alpha: 0.28),
+                      AppTheme.accent2.withValues(alpha: 0.22),
                       Colors.white.withValues(alpha: 0.04),
                     ],
                     stops: const [0.0, 0.55, 1.0],
                   ),
                   border: Border.all(
-                    color: KombuTheme.accent.withValues(alpha: 0.5),
+                    color: AppTheme.accent.withValues(alpha: 0.5),
                     width: 1,
                   ),
                 ),
@@ -1262,14 +1262,14 @@ class _Recipes3DButtonState extends State<_Recipes3DButton> {
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
                           colors: [
-                            KombuTheme.accent,
-                            KombuTheme.accent.withValues(alpha: 0.65),
+                            AppTheme.accent,
+                            AppTheme.accent.withValues(alpha: 0.65),
                           ],
                         ),
                         boxShadow: [
                           BoxShadow(
                             color:
-                                KombuTheme.accent.withValues(alpha: 0.55),
+                                AppTheme.accent.withValues(alpha: 0.55),
                             blurRadius: 18,
                             spreadRadius: -2,
                           ),
@@ -1298,7 +1298,7 @@ class _Recipes3DButtonState extends State<_Recipes3DButton> {
                               fontSize: 20,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.3,
-                              color: KombuTheme.text,
+                              color: AppTheme.text,
                               shadows: [
                                 Shadow(
                                   color: Colors.black54,
@@ -1314,7 +1314,7 @@ class _Recipes3DButtonState extends State<_Recipes3DButton> {
                             style: TextStyle(
                               fontSize: 12,
                               height: 1.3,
-                              color: KombuTheme.text.withValues(alpha: 0.85),
+                              color: AppTheme.text.withValues(alpha: 0.85),
                             ),
                           ),
                         ],
@@ -1328,7 +1328,7 @@ class _Recipes3DButtonState extends State<_Recipes3DButton> {
                         color: Colors.white.withValues(alpha: 0.1),
                       ),
                       child: const Icon(Icons.restaurant_menu,
-                          color: KombuTheme.accent, size: 18),
+                          color: AppTheme.accent, size: 18),
                     ),
                   ],
                 ),
@@ -1377,7 +1377,7 @@ class _DurationStepper extends StatelessWidget {
                         fontWeight: FontWeight.w600, fontSize: 14)),
                 Text('$min–$max',
                     style: const TextStyle(
-                        color: KombuTheme.textDim, fontSize: 11)),
+                        color: AppTheme.textDim, fontSize: 11)),
               ],
             ),
           ),
@@ -1394,7 +1394,7 @@ class _DurationStepper extends StatelessWidget {
               style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w700,
-                  color: KombuTheme.text),
+                  color: AppTheme.text),
             ),
           ),
           _StepBtn(
@@ -1424,18 +1424,18 @@ class _StepBtn extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(10),
           color: enabled
-              ? KombuTheme.accent.withValues(alpha: 0.14)
+              ? AppTheme.accent.withValues(alpha: 0.14)
               : Colors.white.withValues(alpha: 0.04),
           border: Border.all(
             color: enabled
-                ? KombuTheme.accent.withValues(alpha: 0.5)
+                ? AppTheme.accent.withValues(alpha: 0.5)
                 : Colors.white.withValues(alpha: 0.1),
           ),
         ),
         child: Icon(
           icon,
           size: 18,
-          color: enabled ? KombuTheme.accent : KombuTheme.textDim,
+          color: enabled ? AppTheme.accent : AppTheme.textDim,
         ),
       ),
     );
@@ -1461,13 +1461,13 @@ class _ExpandToggle extends StatelessWidget {
             Text(label,
                 style: const TextStyle(
                     fontSize: 12,
-                    color: KombuTheme.accent,
+                    color: AppTheme.accent,
                     fontWeight: FontWeight.w600)),
             AnimatedRotation(
               turns: open ? 0.5 : 0,
               duration: const Duration(milliseconds: 180),
               child: const Icon(Icons.expand_more,
-                  size: 18, color: KombuTheme.accent),
+                  size: 18, color: AppTheme.accent),
             ),
           ],
         ),

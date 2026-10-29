@@ -14,19 +14,19 @@ import 'theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await NotificationService.instance.init();
-  runApp(const KombuApp());
+  runApp(const ScobySenseApp());
 }
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
-class KombuApp extends StatefulWidget {
-  const KombuApp({super.key});
+class ScobySenseApp extends StatefulWidget {
+  const ScobySenseApp({super.key});
 
   @override
-  State<KombuApp> createState() => _KombuAppState();
+  State<ScobySenseApp> createState() => _ScobySenseAppState();
 }
 
-class _KombuAppState extends State<KombuApp> with WidgetsBindingObserver {
+class _ScobySenseAppState extends State<ScobySenseApp> with WidgetsBindingObserver {
   final _auth = AuthService();
   final _updater = UpdateService();
   Timer? _updateTimer;
@@ -66,7 +66,7 @@ class _KombuAppState extends State<KombuApp> with WidgetsBindingObserver {
       UpdateState.version.value = info.version;
       final release = await _updater.checkForUpdate();
       UpdateState.available.value = release;
-    } on KombuFailure {
+    } on AppFailure {
       // Silent; Settings has an explicit button that surfaces errors.
     } catch (_) {
       // Same.
@@ -81,7 +81,7 @@ class _KombuAppState extends State<KombuApp> with WidgetsBindingObserver {
       title: 'ScobySense',
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
-      theme: KombuTheme.build(),
+      theme: AppTheme.build(),
       home: _Boot(auth: _auth, updater: _updater),
     );
   }
@@ -115,13 +115,13 @@ class _BootState extends State<_Boot> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: KombuBackground(
+      body: AppBackground(
         child: FutureBuilder<_BootStatus>(
           future: _status,
           builder: (context, snap) {
             if (snap.connectionState != ConnectionState.done) {
               return const Center(
-                child: CircularProgressIndicator(color: KombuTheme.accent),
+                child: CircularProgressIndicator(color: AppTheme.accent),
               );
             }
             final status = snap.data ?? const _BootStatus();

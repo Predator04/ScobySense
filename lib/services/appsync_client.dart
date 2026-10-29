@@ -105,12 +105,12 @@ class AppSyncClient {
     }
   ''';
 
-  Future<List<KombuDevice>> listDevices() async {
+  Future<List<BrewerDevice>> listDevices() async {
     final data = await _post(_listDevices);
     final items =
         ((data['listDevices'] as Map?)?['items'] as List?) ?? const [];
     return items
-        .map((e) => KombuDevice.fromJson(e as Map<String, dynamic>))
+        .map((e) => BrewerDevice.fromJson(e as Map<String, dynamic>))
         .toList();
   }
 

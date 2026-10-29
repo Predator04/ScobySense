@@ -212,7 +212,7 @@ class UpdateService {
 
     final total = resp.contentLength ?? release.apkSize;
     final dir = await _apkDir();
-    final file = File('${dir.path}/kombu-update.apk');
+    final file = File('${dir.path}/scobysense-update.apk');
     if (await file.exists()) {
       await file.delete();
     }

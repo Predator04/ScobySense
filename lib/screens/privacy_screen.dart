@@ -25,7 +25,7 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Privacy')),
-      body: KombuBackground(
+      body: AppBackground(
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -35,13 +35,13 @@ class _PrivacyScreenState extends State<PrivacyScreen> {
                       height: 80,
                       child: Center(
                           child: CircularProgressIndicator(
-                              color: KombuTheme.accent)))
+                              color: AppTheme.accent)))
                   : SelectableText(
                       _text!,
                       style: const TextStyle(
                         fontSize: 13,
                         height: 1.4,
-                        color: KombuTheme.text,
+                        color: AppTheme.text,
                       ),
                     ),
             ),

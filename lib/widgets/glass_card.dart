@@ -67,7 +67,7 @@ class _GlassCardState extends State<GlassCard> {
                 ),
                 BoxShadow(
                   color:
-                      KombuTheme.accent.withValues(alpha: _pressed ? 0.02 : 0.05),
+                      AppTheme.accent.withValues(alpha: _pressed ? 0.02 : 0.05),
                   blurRadius: 30,
                   spreadRadius: -8,
                   offset: const Offset(0, 10),
@@ -105,15 +105,15 @@ class OfflineBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      color: KombuTheme.accent2.withValues(alpha: 0.12),
+      color: AppTheme.accent2.withValues(alpha: 0.12),
       child: Row(
         children: [
-          const Icon(Icons.wifi_off, size: 16, color: KombuTheme.accent2),
+          const Icon(Icons.wifi_off, size: 16, color: AppTheme.accent2),
           const SizedBox(width: 8),
           Expanded(
             child: Text(
               message,
-              style: const TextStyle(color: KombuTheme.accent2, fontSize: 12),
+              style: const TextStyle(color: AppTheme.accent2, fontSize: 12),
             ),
           ),
         ],
@@ -134,14 +134,14 @@ class InlineErrorCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(children: const [
-            Icon(Icons.error_outline, color: KombuTheme.danger, size: 18),
+            Icon(Icons.error_outline, color: AppTheme.danger, size: 18),
             SizedBox(width: 8),
             Text('Something went wrong',
                 style: TextStyle(
-                    color: KombuTheme.danger, fontWeight: FontWeight.w600)),
+                    color: AppTheme.danger, fontWeight: FontWeight.w600)),
           ]),
           const SizedBox(height: 6),
-          Text(message, style: const TextStyle(color: KombuTheme.textDim)),
+          Text(message, style: const TextStyle(color: AppTheme.textDim)),
           if (onRetry != null) ...[
             const SizedBox(height: 12),
             ElevatedButton.icon(

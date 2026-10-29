@@ -53,7 +53,7 @@ class _BatchScreenState extends State<BatchScreen> {
     final text = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: KombuTheme.bg2,
+        backgroundColor: AppTheme.bg2,
         title: Text('Notes — ${stage.side ?? ''} ${stage.eventType ?? ''}'),
         content: TextField(
           controller: controller,
@@ -79,7 +79,7 @@ class _BatchScreenState extends State<BatchScreen> {
         const SnackBar(content: Text('Notes saved.')),
       );
       _refresh();
-    } on KombuFailure catch (e) {
+    } on AppFailure catch (e) {
       _snack(e.message);
     } catch (e) {
       _snack(e.toString());
@@ -99,22 +99,22 @@ class _BatchScreenState extends State<BatchScreen> {
             ? 'Batches — ${widget.deviceName}'
             : 'Batches'),
       ),
-      body: KombuBackground(
+      body: AppBackground(
         child: RefreshIndicator(
           onRefresh: _refresh,
-          color: KombuTheme.accent,
+          color: AppTheme.accent,
           child: FutureBuilder<BrewCycleReport>(
             future: _future,
             builder: (context, snap) {
               if (snap.connectionState != ConnectionState.done) {
                 return const Center(
                     child:
-                        CircularProgressIndicator(color: KombuTheme.accent));
+                        CircularProgressIndicator(color: AppTheme.accent));
               }
               if (snap.hasError) {
                 final err = snap.error;
                 final msg =
-                    err is KombuFailure ? err.message : err.toString();
+                    err is AppFailure ? err.message : err.toString();
                 return ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
@@ -130,7 +130,7 @@ class _BatchScreenState extends State<BatchScreen> {
                     GlassCard(
                       child: Text(
                         'No brew cycles yet for this device.',
-                        style: TextStyle(color: KombuTheme.textDim),
+                        style: TextStyle(color: AppTheme.textDim),
                       ),
                     ),
                   ],
@@ -171,7 +171,7 @@ class _BatchScreenState extends State<BatchScreen> {
             _stageRow('F2 running', r.activeF2!, onEdit: _editNotes),
           if (r.activeF1 == null && r.activeF2 == null)
             const Text('No active stages.',
-                style: TextStyle(color: KombuTheme.textDim)),
+                style: TextStyle(color: AppTheme.textDim)),
         ],
       ),
     );
@@ -179,7 +179,7 @@ class _BatchScreenState extends State<BatchScreen> {
 
   Widget _batchCard(BrewBatch b) {
     final tag = b.isComplete ? 'DONE' : 'IN PROGRESS';
-    final tagColor = b.isComplete ? KombuTheme.textDim : KombuTheme.accent;
+    final tagColor = b.isComplete ? AppTheme.textDim : AppTheme.accent;
     return GlassCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -240,7 +240,7 @@ class _BatchScreenState extends State<BatchScreen> {
                     if (end != null) 'end ${_fmt(end)}',
                   ].join(' · '),
                   style: const TextStyle(
-                      color: KombuTheme.textDim, fontSize: 11),
+                      color: AppTheme.textDim, fontSize: 11),
                 ),
                 if ((s.notes ?? '').isNotEmpty) ...[
                   const SizedBox(height: 4),
@@ -264,5 +264,5 @@ class _BatchScreenState extends State<BatchScreen> {
   DateTime? _parseIso(String? iso) =>
       (iso == null || iso.isEmpty) ? null : DateTime.tryParse(iso)?.toLocal();
 
-  String _fmt(DateTime d) => formatKombuDateTime(d, _use24Hour);
+  String _fmt(DateTime d) => formatAppDateTime(d, _use24Hour);
 }

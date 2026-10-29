@@ -147,7 +147,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(_isEditing ? 'Edit recipe' : 'Add recipe')),
-      body: KombuBackground(
+      body: AppBackground(
         child: SafeArea(
           child: Form(
             key: _formKey,
@@ -172,7 +172,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                       DropdownButtonFormField<String?>(
                         value: _selectedCategory,
                         isExpanded: true,
-                        dropdownColor: KombuTheme.bg2,
+                        dropdownColor: AppTheme.bg2,
                         decoration: const InputDecoration(
                           hintText: 'No category',
                         ),
@@ -189,7 +189,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                           const DropdownMenuItem<String?>(
                             value: _kNewCategorySentinel,
                             child: Text('+ New category…',
-                                style: TextStyle(color: KombuTheme.accent)),
+                                style: TextStyle(color: AppTheme.accent)),
                           ),
                         ],
                         onChanged: (v) =>
@@ -293,7 +293,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
         padding: const EdgeInsets.only(bottom: 6),
         child: Text(s,
             style: const TextStyle(
-                color: KombuTheme.textDim,
+                color: AppTheme.textDim,
                 fontSize: 12,
                 letterSpacing: 0.4,
                 fontWeight: FontWeight.w600)),

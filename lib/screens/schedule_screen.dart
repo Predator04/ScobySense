@@ -171,11 +171,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       messenger.showSnackBar(
         SnackBar(content: Text('$side brew started: ${_humanize(seconds)}')),
       );
-    } on KombuFailure catch (e) {
+    } on AppFailure catch (e) {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          backgroundColor: KombuTheme.danger,
+          backgroundColor: AppTheme.danger,
           content: Text('$side brew failed: ${e.message}'),
         ),
       );
@@ -183,7 +183,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       if (!mounted) return;
       messenger.showSnackBar(
         SnackBar(
-          backgroundColor: KombuTheme.danger,
+          backgroundColor: AppTheme.danger,
           content: Text('$side brew failed: $e'),
         ),
       );
@@ -196,10 +196,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Schedule')),
-      body: KombuBackground(
+      body: AppBackground(
         child: !_loaded
             ? const Center(
-                child: CircularProgressIndicator(color: KombuTheme.accent))
+                child: CircularProgressIndicator(color: AppTheme.accent))
             : ListView(
                 padding: const EdgeInsets.all(16),
                 children: [
@@ -213,7 +213,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         Text(
                           'Fires set_heater with the saved brew duration. Change the duration from the device screen.',
                           style: TextStyle(
-                              fontSize: 12, color: KombuTheme.textDim),
+                              fontSize: 12, color: AppTheme.textDim),
                         ),
                       ],
                     ),
@@ -233,7 +233,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                         Text(
                           'Saved on this phone only. The device accepts duration-based timers (not time-of-day), so these are personal reminders rather than dispatched schedules.',
                           style: TextStyle(
-                              fontSize: 12, color: KombuTheme.textDim),
+                              fontSize: 12, color: AppTheme.textDim),
                         ),
                       ],
                     ),
@@ -264,7 +264,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                 const SizedBox(height: 2),
                 Text('Saved duration: $human',
                     style: const TextStyle(
-                        fontSize: 12, color: KombuTheme.textDim)),
+                        fontSize: 12, color: AppTheme.textDim)),
               ],
             ),
           ),
@@ -306,7 +306,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           SizedBox(
             width: 60,
             child: Text(label,
-                style: const TextStyle(color: KombuTheme.textDim)),
+                style: const TextStyle(color: AppTheme.textDim)),
           ),
           Expanded(child: Text(_fmt(v))),
           TextButton(

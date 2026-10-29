@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-class KombuTheme {
+class AppTheme {
   static const Color bg = Color(0xFF05080C);
   static const Color bg2 = Color(0xFF0F1620);
   static const Color accent = Color(0xFF5EEAD4);
@@ -101,9 +101,9 @@ class _FadeThroughTransitionsBuilder extends PageTransitionsBuilder {
   }
 }
 
-class KombuBackground extends StatelessWidget {
+class AppBackground extends StatelessWidget {
   final Widget child;
-  const KombuBackground({super.key, required this.child});
+  const AppBackground({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {
@@ -167,7 +167,7 @@ class SectionTitle extends StatelessWidget {
                   fontSize: 13,
                   letterSpacing: 1.2,
                   fontWeight: FontWeight.w600,
-                  color: KombuTheme.textDim)),
+                  color: AppTheme.textDim)),
           const Spacer(),
           if (trailing != null) trailing!,
         ],
