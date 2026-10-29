@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../theme.dart';
 import '../widgets/glass_card.dart';
 
@@ -166,19 +165,13 @@ class _RecipeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasFullGuide =
-        data['steps'] is List || data['ingredients'] is List;
     return GlassCard(
       onTap: () {
-        if (hasFullGuide) {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => _RecipeDetail(data: data)),
-          );
-        } else {
-          _openUrl(data['url'] as String?);
-        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) => _RecipeDetail(data: data)),
+        );
       },
       child: Row(
         children: [
@@ -216,19 +209,12 @@ class _RecipeCard extends StatelessWidget {
                       style: const TextStyle(
                           color: AppTheme.textDim, fontSize: 13)),
                 ],
-                if (hasFullGuide) ...[
-                  const SizedBox(height: 6),
-                  const Text('Open full guide →',
-                      style: TextStyle(
-                          color: AppTheme.accent,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600)),
-                ] else ...[
-                  const SizedBox(height: 6),
-                  Text(data['url']?.toString() ?? '',
-                      style: const TextStyle(
-                          color: AppTheme.accent, fontSize: 12)),
-                ],
+                const SizedBox(height: 6),
+                const Text('Open recipe →',
+                    style: TextStyle(
+                        color: AppTheme.accent,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600)),
               ],
             ),
           ),
@@ -236,15 +222,6 @@ class _RecipeCard extends StatelessWidget {
         ],
       ),
     );
-  }
-}
-
-Future<void> _openUrl(String? url) async {
-  if (url == null) return;
-  final uri = Uri.tryParse(url);
-  if (uri == null) return;
-  if (await canLaunchUrl(uri)) {
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 }
 
@@ -385,14 +362,6 @@ class _RecipeBlock extends StatelessWidget {
             const SizedBox(height: 4),
             Text(data['warning_signs'] as String,
                 style: const TextStyle(color: AppTheme.accent2)),
-          ],
-          if (!isSub && data['url'] != null) ...[
-            const SizedBox(height: 12),
-            OutlinedButton.icon(
-              onPressed: () => _openUrl(data['url'] as String?),
-              icon: const Icon(Icons.open_in_new),
-              label: const Text('Source'),
-            ),
           ],
         ],
       ),
