@@ -8,6 +8,7 @@ import '../theme.dart';
 import '../widgets/glass_card.dart';
 import '../widgets/update_dialog.dart';
 import 'privacy_screen.dart';
+import 'terms_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   final Future<void> Function() onLogout;
@@ -281,6 +282,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 10),
                   Row(
                     children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const TermsScreen())),
+                          icon: const Icon(Icons.gavel_outlined, size: 16),
+                          label: const Text('Terms'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: OutlinedButton.icon(
                           onPressed: () => Navigator.push(

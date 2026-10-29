@@ -34,6 +34,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
   final _history = HistoryStore();
   late BrewerDevice _device = widget.initial;
   Timer? _poll;
+  Timer? _ticker;
   bool _liveConnected = false;
   List<Map<String, dynamic>> _alertRules = const [];
   DateTime? _lastF1Expected;
@@ -46,6 +47,9 @@ class _DeviceScreenState extends State<DeviceScreen> {
   bool _controlOpen = false;
   String _unit = 'F';
   bool _use24Hour = false;
+  String? _localName;
+  int _f1Days = AppPrefs.defaultF1Days;
+  int _f2Days = AppPrefs.defaultF2Days;
 
   @override
   void initState() {
@@ -54,8 +58,14 @@ class _DeviceScreenState extends State<DeviceScreen> {
     _loadTimeFormat();
     _loadHistory();
     _loadAlertRules();
+    _loadLocalName();
+    _loadBrewDays();
     _refresh();
     _poll = Timer.periodic(const Duration(seconds: 60), (_) => _refresh());
+    // Keep the countdown fresh between polls.
+    _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
+      if (mounted) setState(() {});
+    });
     _startLive();
   }
 
@@ -127,9 +137,34 @@ class _DeviceScreenState extends State<DeviceScreen> {
     } catch (_) {}
   }
 
+  Future<void> _loadLocalName() async {
+    final n = await AppPrefs.deviceDisplayName(_device.deviceId);
+    if (mounted) setState(() => _localName = n);
+  }
+
+  Future<void> _loadBrewDays() async {
+    final f1 = await AppPrefs.brewDays(_device.deviceId, 'F1');
+    final f2 = await AppPrefs.brewDays(_device.deviceId, 'F2');
+    if (mounted) {
+      setState(() {
+        _f1Days = f1;
+        _f2Days = f2;
+      });
+    }
+  }
+
+  String get _displayName {
+    final n = _localName;
+    if (n != null && n.isNotEmpty) return n;
+    final remote = _device.deviceName;
+    if (remote != null && remote.isNotEmpty) return remote;
+    return _device.deviceId;
+  }
+
   @override
   void dispose() {
     _poll?.cancel();
+    _ticker?.cancel();
     _subListen?.cancel();
     _sub.stop();
     super.dispose();
@@ -215,8 +250,20 @@ class _DeviceScreenState extends State<DeviceScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(_device.deviceName ?? _device.deviceId),
+        title: InkWell(
+          onTap: _promptRename,
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Text(_displayName, overflow: TextOverflow.ellipsis),
+          ),
+        ),
         actions: [
+          IconButton(
+            tooltip: 'Rename device',
+            icon: const Icon(Icons.drive_file_rename_outline),
+            onPressed: _promptRename,
+          ),
           IconButton(
             tooltip: 'Batches',
             icon: const Icon(Icons.science_outlined),
@@ -226,7 +273,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 builder: (_) => BatchScreen(
                   auth: widget.auth,
                   deviceId: _device.deviceId,
-                  deviceName: _device.deviceName,
+                  deviceName: _displayName,
                 ),
               ),
             ),
@@ -247,41 +294,275 @@ class _DeviceScreenState extends State<DeviceScreen> {
         ],
       ),
       body: AppBackground(
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            _statusCard(),
-            const SizedBox(height: 14),
-            _controlCard(),
-            const SizedBox(height: 14),
-            if (_samples.length > 1) _chartCard(),
-            if (_ack != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 14),
-                child: GlassCard(
-                  child: Row(
-                    children: [
-                      const Icon(Icons.check_circle,
-                          color: AppTheme.accent, size: 18),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text('ACK: $_ack',
-                            style:
-                                const TextStyle(color: AppTheme.accent)),
-                      ),
-                    ],
+        child: RefreshIndicator(
+          onRefresh: _refresh,
+          color: AppTheme.accent,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            children: [
+              _statusCard(),
+              const SizedBox(height: 14),
+              _controlCard(),
+              const SizedBox(height: 14),
+              if (_samples.length > 1) _chartCard(),
+              if (_ack != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: GlassCard(
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check_circle,
+                            color: AppTheme.accent, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text('ACK: $_ack',
+                              style:
+                                  const TextStyle(color: AppTheme.accent)),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            if (_err != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 14),
-                child: InlineErrorCard(message: _err!, onRetry: _refresh),
-              ),
-          ],
+              if (_err != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: InlineErrorCard(message: _err!, onRetry: _refresh),
+                ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _promptRename() async {
+    final controller = TextEditingController(text: _localName ?? '');
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bg2,
+        title: const Text('Rename device'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: controller,
+              autofocus: true,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(
+                labelText: 'Display name',
+                hintText: _device.deviceName ?? _device.deviceId,
+              ),
+              onSubmitted: (v) => Navigator.pop(ctx, v),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Stored on this device only — does not change the name on ScobySense\'s servers.',
+              style: TextStyle(color: AppTheme.textDim, fontSize: 12),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: const Text('Cancel'),
+          ),
+          if ((_localName ?? '').isNotEmpty)
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, ''),
+              child: const Text('Reset'),
+            ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (result == null) return;
+    final trimmed = result.trim();
+    await AppPrefs.setDeviceDisplayName(
+        _device.deviceId, trimmed.isEmpty ? null : trimmed);
+    if (!mounted) return;
+    setState(() => _localName = trimmed.isEmpty ? null : trimmed);
+  }
+
+  Future<void> _showBrewDurationSheet(String side) async {
+    final isF1 = side.toUpperCase() == 'F1';
+    final minDays = 2;
+    final maxDays = isF1 ? 5 : 10;
+    final current = isF1 ? _f1Days : _f2Days;
+    int selected = current.clamp(minDays, maxDays);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.bg2,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) => Padding(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: 20 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: AppTheme.accent.withValues(alpha: 0.14),
+                      border: Border.all(
+                          color: AppTheme.accent.withValues(alpha: 0.4)),
+                    ),
+                    child: const Icon(Icons.timer_outlined,
+                        color: AppTheme.accent, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Set $side brew duration',
+                      style: const TextStyle(
+                          fontSize: 18, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Currently saved: $current ${current == 1 ? "day" : "days"} '
+                '(range $minDays–$maxDays)',
+                style: const TextStyle(
+                    color: AppTheme.textDim, fontSize: 12),
+              ),
+              const SizedBox(height: 16),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  for (int d = minDays; d <= maxDays; d++)
+                    ChoiceChip(
+                      label: Text('${d}d'),
+                      selected: selected == d,
+                      onSelected: (_) => setSheet(() => selected = d),
+                      selectedColor:
+                          AppTheme.accent.withValues(alpha: 0.25),
+                      labelStyle: TextStyle(
+                        color: selected == d
+                            ? AppTheme.accent
+                            : AppTheme.text,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      backgroundColor:
+                          Colors.white.withValues(alpha: 0.05),
+                      shape: StadiumBorder(
+                        side: BorderSide(
+                          color: selected == d
+                              ? AppTheme.accent
+                              : Colors.white.withValues(alpha: 0.12),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.accent2.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                      color: AppTheme.accent2.withValues(alpha: 0.3)),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline,
+                        size: 16, color: AppTheme.accent2),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Applies when control is confirmed. Nothing is sent to the device yet.',
+                        style: TextStyle(
+                            color: AppTheme.accent2, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () async {
+                        await AppPrefs.setBrewDays(
+                            _device.deviceId, side, selected);
+                        // TODO(payload-wrapper): once PAYLOAD_WRAPPER_TODO in
+                        // command_service.dart is confirmed, dispatch here:
+                        //   await _cmd.setBrewTimer(_device.deviceId, side, selected);
+                        if (!ctx.mounted) return;
+                        Navigator.pop(ctx);
+                        if (!mounted) return;
+                        setState(() {
+                          if (isF1) {
+                            _f1Days = selected;
+                          } else {
+                            _f2Days = selected;
+                          }
+                        });
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '$side duration saved: ${selected}d '
+                              '(applies when control is confirmed)',
+                            ),
+                          ),
+                        );
+                      },
+                      child: const Text('Save duration'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _formatCountdown(DateTime end) {
+    final diff = end.difference(DateTime.now());
+    if (diff.isNegative || diff == Duration.zero) return 'overdue';
+    if (diff.inDays >= 1) {
+      final h = diff.inHours.remainder(24);
+      return '${diff.inDays}d ${h}h left';
+    }
+    if (diff.inHours >= 1) {
+      final m = diff.inMinutes.remainder(60);
+      return '${diff.inHours}h ${m}m left';
+    }
+    if (diff.inMinutes >= 1) return '${diff.inMinutes}m left';
+    return '<1m left';
   }
 
   Widget _statusCard() {
@@ -354,6 +635,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
                   valueTop: ft(_device.f1Temp),
                   valueBot: _device.f1On ? 'HEATING' : 'off',
                   accent: _device.f1On,
+                  footer: 'Brew: ${_f1Days}d · tap to change',
+                  onTap: () => _showBrewDurationSheet('F1'),
                 ),
               ),
               const SizedBox(width: 12),
@@ -363,6 +646,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
                   valueTop: ft(_device.f2Temp),
                   valueBot: _device.f2On ? 'HEATING' : 'off',
                   accent: _device.f2On,
+                  footer: 'Brew: ${_f2Days}d · tap to change',
+                  onTap: () => _showBrewDurationSheet('F2'),
                 ),
               ),
             ],
@@ -386,8 +671,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 children: [
                   _kv('F1 remaining', formatRemaining(_device.f1RemainingTime)),
                   _kv('F2 remaining', formatRemaining(_device.f2RemainingTime)),
-                  _kv('WiFi',
-                      (_device.wifiConnected ?? false) ? 'connected' : 'offline'),
+                  _kv('WiFi (device-reported)', _wifiLabel(online)),
                   _kv('Firmware', _device.firmwareVersion ?? '--'),
                   _kv('Last seen', _device.lastSeen ?? '--'),
                 ],
@@ -399,7 +683,37 @@ class _DeviceScreenState extends State<DeviceScreen> {
     );
   }
 
+  String _wifiLabel(bool online) {
+    final connected = _device.wifiConnected ?? false;
+    if (connected) return 'connected';
+    if (online) return 'offline (still reachable via cloud)';
+    return 'offline';
+  }
+
   Widget _summaryRow(String Function(String?) fmt) {
+    String? iso;
+    String side = '';
+    if (_device.f1On) {
+      iso = _device.f1RemainingTime;
+      side = 'F1';
+    } else if (_device.f2On) {
+      iso = _device.f2RemainingTime;
+      side = 'F2';
+    }
+
+    String text;
+    if (iso == null || iso.isEmpty) {
+      text = 'Idle';
+    } else {
+      final end = DateTime.tryParse(iso)?.toLocal();
+      final absolute = fmt(iso);
+      if (end != null) {
+        text = '$side ends $absolute · ${_formatCountdown(end)}';
+      } else {
+        text = '$side ends $absolute';
+      }
+    }
+
     return Padding(
       padding: const EdgeInsets.only(top: 6, bottom: 2),
       child: Row(
@@ -408,11 +722,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
           const SizedBox(width: 6),
           Expanded(
             child: Text(
-              _device.f1On
-                  ? 'F1 ends ${fmt(_device.f1RemainingTime)}'
-                  : _device.f2On
-                      ? 'F2 ends ${fmt(_device.f2RemainingTime)}'
-                      : 'Idle',
+              text,
               style: const TextStyle(fontSize: 12, color: AppTheme.textDim),
               overflow: TextOverflow.ellipsis,
             ),
@@ -581,16 +891,20 @@ class _StatBlock extends StatelessWidget {
   final String valueTop;
   final String valueBot;
   final bool accent;
+  final String? footer;
+  final VoidCallback? onTap;
   const _StatBlock({
     required this.label,
     required this.valueTop,
     required this.valueBot,
     required this.accent,
+    this.footer,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
+    final content = AnimatedContainer(
       duration: const Duration(milliseconds: 220),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -616,11 +930,22 @@ class _StatBlock extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(
-                  color: AppTheme.textDim,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600)),
+          Row(
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      color: AppTheme.textDim,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+              if (onTap != null) ...[
+                const Spacer(),
+                Icon(Icons.edit_calendar_outlined,
+                    size: 14,
+                    color:
+                        AppTheme.textDim.withValues(alpha: 0.8)),
+              ],
+            ],
+          ),
           const SizedBox(height: 4),
           Text(valueTop,
               style: const TextStyle(
@@ -631,7 +956,26 @@ class _StatBlock extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0.5,
                   color: accent ? AppTheme.accent : AppTheme.textDim)),
+          if (footer != null) ...[
+            const SizedBox(height: 6),
+            Text(footer!,
+                style: const TextStyle(
+                    fontSize: 10.5,
+                    color: AppTheme.textDim,
+                    letterSpacing: 0.2)),
+          ],
         ],
+      ),
+    );
+
+    if (onTap == null) return content;
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(16),
+        onTap: onTap,
+        child: content,
       ),
     );
   }

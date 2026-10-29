@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
 import 'screens/devices_screen.dart';
+import 'screens/terms_screen.dart';
 import 'services/auth_service.dart';
+import 'services/prefs.dart';
 import 'services/update_service.dart';
 import 'services/errors.dart';
 import 'services/notification_service.dart';
@@ -79,37 +81,53 @@ class _Boot extends StatefulWidget {
 }
 
 class _BootState extends State<_Boot> {
-  Future<bool>? _signedIn;
+  Future<_BootStatus>? _status;
+  bool _handed = false;
 
   @override
   void initState() {
     super.initState();
-    _signedIn = _check();
+    _status = _check();
   }
 
-  Future<bool> _check() async {
+  Future<_BootStatus> _check() async {
+    final termsOk = await AppPrefs.termsAccepted();
     final t = await widget.auth.currentTokens();
-    return t != null;
+    return _BootStatus(termsOk: termsOk, signedIn: t != null);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: AppBackground(
-        child: FutureBuilder<bool>(
-          future: _signedIn,
+        child: FutureBuilder<_BootStatus>(
+          future: _status,
           builder: (context, snap) {
             if (snap.connectionState != ConnectionState.done) {
               return const Center(
                 child: CircularProgressIndicator(color: AppTheme.accent),
               );
             }
-            final signedIn = snap.data ?? false;
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) return;
+            final status = snap.data ?? const _BootStatus();
+            WidgetsBinding.instance.addPostFrameCallback((_) async {
+              if (_handed || !mounted) return;
+              _handed = true;
               final ctx = context;
               if (!ctx.mounted) return;
-              final next = signedIn
+              if (!status.termsOk) {
+                final accepted = await Navigator.of(ctx).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => const TermsScreen(requireAccept: true),
+                    fullscreenDialog: true,
+                  ),
+                );
+                if (accepted != true) {
+                  _handed = false;
+                  return;
+                }
+                if (!mounted || !ctx.mounted) return;
+              }
+              final next = status.signedIn
                   ? DevicesScreen(auth: widget.auth, updater: widget.updater)
                   : LoginScreen(auth: widget.auth, updater: widget.updater);
               Navigator.of(ctx).pushReplacement(
@@ -122,4 +140,10 @@ class _BootState extends State<_Boot> {
       ),
     );
   }
+}
+
+class _BootStatus {
+  final bool termsOk;
+  final bool signedIn;
+  const _BootStatus({this.termsOk = false, this.signedIn = false});
 }

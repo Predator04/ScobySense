@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/appsync_client.dart';
 import '../services/errors.dart';
+import '../services/prefs.dart';
 import '../services/update_service.dart';
 import '../models/device.dart';
 import '../theme.dart';
@@ -26,15 +27,22 @@ class _DevicesScreenState extends State<DevicesScreen> {
   late final AppSyncClient _client = AppSyncClient(widget.auth);
   Future<List<BrewerDevice>>? _future;
   bool _offline = false;
+  Map<String, String> _localNames = const {};
   late final StreamSubscription<List<ConnectivityResult>> _connSub;
 
   @override
   void initState() {
     super.initState();
     _future = _client.listDevices();
+    _loadLocalNames();
     _connSub =
         Connectivity().onConnectivityChanged.listen(_handleConnectivity);
     Connectivity().checkConnectivity().then(_handleConnectivity);
+  }
+
+  Future<void> _loadLocalNames() async {
+    final names = await AppPrefs.loadDeviceDisplayNames();
+    if (mounted) setState(() => _localNames = names);
   }
 
   @override
@@ -55,6 +63,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
   Future<void> _refresh() async {
     final f = _client.listDevices();
     setState(() => _future = f);
+    _loadLocalNames();
     try {
       await f;
     } on AppFailure catch (e) {
@@ -171,15 +180,20 @@ class _DevicesScreenState extends State<DevicesScreen> {
                             const SizedBox(height: 14),
                         itemBuilder: (_, i) => _DeviceTile(
                           device: devices[i],
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => DeviceScreen(
-                                auth: widget.auth,
-                                initial: devices[i],
+                          displayName:
+                              _localNames[devices[i].deviceId],
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DeviceScreen(
+                                  auth: widget.auth,
+                                  initial: devices[i],
+                                ),
                               ),
-                            ),
-                          ),
+                            );
+                            _loadLocalNames();
+                          },
                         ),
                       );
                     },
@@ -196,12 +210,17 @@ class _DevicesScreenState extends State<DevicesScreen> {
 
 class _DeviceTile extends StatelessWidget {
   final BrewerDevice device;
+  final String? displayName;
   final VoidCallback onTap;
-  const _DeviceTile({required this.device, required this.onTap});
+  const _DeviceTile(
+      {required this.device, this.displayName, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final online = (device.status ?? '').toLowerCase() == 'online';
+    final name = (displayName != null && displayName!.isNotEmpty)
+        ? displayName!
+        : (device.deviceName ?? device.deviceId);
     return GlassCard(
       onTap: onTap,
       padding: const EdgeInsets.all(18),
@@ -243,7 +262,7 @@ class _DeviceTile extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(device.deviceName ?? device.deviceId,
+                Text(name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(

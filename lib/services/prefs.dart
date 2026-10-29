@@ -9,6 +9,10 @@ class AppPrefs {
   static const kScheduleF1Stop = 'schedule_f1_stop';
   static const kScheduleF2Start = 'schedule_f2_start';
   static const kScheduleF2Stop = 'schedule_f2_stop';
+  static const kTermsAccepted = 'terms_accepted_v1';
+
+  static const int defaultF1Days = 3;
+  static const int defaultF2Days = 7;
 
   static Future<String> unit() async {
     final p = await SharedPreferences.getInstance();
@@ -38,6 +42,64 @@ class AppPrefs {
   static Future<void> setUse24Hour(bool v) async {
     final p = await SharedPreferences.getInstance();
     await p.setBool(kUse24Hour, v);
+  }
+
+  static Future<bool> termsAccepted() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getBool(kTermsAccepted) ?? false;
+  }
+
+  static Future<void> setTermsAccepted(bool v) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(kTermsAccepted, v);
+  }
+
+  static String _brewKey(String deviceId, String side) =>
+      'brew:$deviceId:${side.toLowerCase()}days';
+
+  static int defaultBrewDays(String side) =>
+      side.toUpperCase() == 'F1' ? defaultF1Days : defaultF2Days;
+
+  static Future<int> brewDays(String deviceId, String side) async {
+    final p = await SharedPreferences.getInstance();
+    return p.getInt(_brewKey(deviceId, side)) ?? defaultBrewDays(side);
+  }
+
+  static Future<void> setBrewDays(
+      String deviceId, String side, int days) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setInt(_brewKey(deviceId, side), days);
+  }
+
+  static String _nameKey(String deviceId) => 'device:$deviceId:name';
+
+  static Future<String?> deviceDisplayName(String deviceId) async {
+    final p = await SharedPreferences.getInstance();
+    final v = p.getString(_nameKey(deviceId));
+    return (v == null || v.isEmpty) ? null : v;
+  }
+
+  static Future<void> setDeviceDisplayName(
+      String deviceId, String? name) async {
+    final p = await SharedPreferences.getInstance();
+    final trimmed = name?.trim();
+    if (trimmed == null || trimmed.isEmpty) {
+      await p.remove(_nameKey(deviceId));
+    } else {
+      await p.setString(_nameKey(deviceId), trimmed);
+    }
+  }
+
+  static Future<Map<String, String>> loadDeviceDisplayNames() async {
+    final p = await SharedPreferences.getInstance();
+    final out = <String, String>{};
+    for (final k in p.getKeys()) {
+      if (!k.startsWith('device:') || !k.endsWith(':name')) continue;
+      final id = k.substring('device:'.length, k.length - ':name'.length);
+      final v = p.getString(k);
+      if (v != null && v.isNotEmpty) out[id] = v;
+    }
+    return out;
   }
 }
 
