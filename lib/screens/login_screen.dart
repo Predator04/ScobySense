@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
+import '../services/demo_mode.dart';
 import '../services/errors.dart';
 import '../services/update_service.dart';
 import '../theme.dart';
@@ -28,6 +29,14 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _tryDemo() {
+    DemoMode.active = true;
+    Navigator.of(context).pushReplacement(MaterialPageRoute(
+      builder: (_) =>
+          DevicesScreen(auth: widget.auth, updater: widget.updater),
+    ));
+  }
+
   Future<void> _login() async {
     final email = _email.text.trim();
     if (email.isEmpty || _password.text.isEmpty) {
@@ -39,6 +48,7 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
     try {
+      DemoMode.active = false;
       await widget.auth.login(email, _password.text);
       if (!mounted) return;
       Navigator.of(context).pushReplacement(MaterialPageRoute(
@@ -164,6 +174,18 @@ class _LoginScreenState extends State<LoginScreen> {
                                     strokeWidth: 2,
                                     color: Color(0xFF04070A)))
                             : const Text('Sign in'),
+                      ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _tryDemo,
+                        icon: const Icon(Icons.play_circle_outline, size: 18),
+                        label: const Text('Try the demo'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.accent,
+                          side: BorderSide(
+                              color: AppTheme.accent.withValues(alpha: 0.5)),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
                       ),
                       const SizedBox(height: 12),
                       const Text(

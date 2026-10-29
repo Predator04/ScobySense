@@ -5,6 +5,8 @@ import '../models/device.dart';
 import '../services/appsync_client.dart';
 import '../services/auth_service.dart';
 import '../services/command_service.dart';
+import '../services/demo_data.dart';
+import '../services/demo_mode.dart';
 import '../services/errors.dart';
 import '../services/history_store.dart';
 import '../services/notification_service.dart';
@@ -67,10 +69,18 @@ class _DeviceScreenState extends State<DeviceScreen> {
     super.initState();
     _loadUnit();
     _loadTimeFormat();
-    _loadHistory();
-    _loadAlertRules();
     _loadLocalName();
     _loadBrewSeconds();
+    if (DemoMode.active) {
+      _samples = DemoData.history();
+      _device = DemoData.device();
+      _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
+        if (mounted) setState(() {});
+      });
+      return;
+    }
+    _loadHistory();
+    _loadAlertRules();
     _refresh();
     _poll = Timer.periodic(const Duration(seconds: 60), (_) => _refresh());
     // Keep the countdown fresh between polls.
@@ -190,7 +200,9 @@ class _DeviceScreenState extends State<DeviceScreen> {
     _poll?.cancel();
     _ticker?.cancel();
     _subListen?.cancel();
-    _sub.stop();
+    if (!DemoMode.active) {
+      _sub.stop();
+    }
     super.dispose();
   }
 
@@ -200,6 +212,15 @@ class _DeviceScreenState extends State<DeviceScreen> {
   }
 
   Future<void> _refresh() async {
+    if (DemoMode.active) {
+      if (!mounted) return;
+      setState(() {
+        _device = DemoData.device();
+        _samples = DemoData.history();
+        _err = null;
+      });
+      return;
+    }
     try {
       final devices = await _client.listDevices();
       final match = devices.firstWhere(
@@ -232,6 +253,10 @@ class _DeviceScreenState extends State<DeviceScreen> {
   }
 
   Future<void> _run(String label, Future<bool> Function() op) async {
+    if (DemoMode.active) {
+      setState(() => _ack = '$label (demo — not sent)');
+      return;
+    }
     setState(() {
       _busy = true;
       _ack = null;
@@ -261,7 +286,37 @@ class _DeviceScreenState extends State<DeviceScreen> {
           borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-            child: Text(_displayName, overflow: TextOverflow.ellipsis),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child:
+                      Text(_displayName, overflow: TextOverflow.ellipsis),
+                ),
+                if (DemoMode.active) ...[
+                  const SizedBox(width: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppTheme.accent2.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                          color: AppTheme.accent2.withValues(alpha: 0.5)),
+                    ),
+                    child: const Text(
+                      'DEMO',
+                      style: TextStyle(
+                        color: AppTheme.accent2,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
           ),
         ),
         actions: [
@@ -520,6 +575,13 @@ class _DeviceScreenState extends State<DeviceScreen> {
                       Navigator.pop(ctx);
                       if (!mounted) return;
                       final messenger = ScaffoldMessenger.of(context);
+                      if (DemoMode.active) {
+                        messenger.showSnackBar(
+                          SnackBar(content: Text('$side turn off (demo)')),
+                        );
+                        setState(() => _ack = '$side turn off (demo)');
+                        return;
+                      }
                       try {
                         await _cmd.stopBrew(_device.deviceId, side);
                         if (!mounted) return;
@@ -592,6 +654,17 @@ class _DeviceScreenState extends State<DeviceScreen> {
                                   ScaffoldMessenger.of(context);
                               final human =
                                   _humanizeDuration(totalSeconds);
+                              if (DemoMode.active) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        '$side brew (demo): $human'),
+                                  ),
+                                );
+                                setState(() =>
+                                    _ack = '$side brew $human (demo)');
+                                return;
+                              }
                               try {
                                 await _cmd.setBrewTimerSeconds(
                                     _device.deviceId, side, totalSeconds);

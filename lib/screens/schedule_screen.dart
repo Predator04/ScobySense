@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../services/appsync_client.dart';
 import '../services/auth_service.dart';
 import '../services/command_service.dart';
+import '../services/demo_mode.dart';
 import '../services/errors.dart';
 import '../services/prefs.dart';
 import '../theme.dart';
@@ -164,6 +165,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   Future<void> _startBrew(String side) async {
     final seconds = side == 'F1' ? _f1Seconds : _f2Seconds;
     final messenger = ScaffoldMessenger.of(context);
+    if (DemoMode.active) {
+      messenger.showSnackBar(
+        SnackBar(content: Text('$side brew (demo): ${_humanize(seconds)}')),
+      );
+      return;
+    }
     setState(() => _busy = true);
     try {
       await _cmd.setBrewTimerSeconds(widget.deviceId, side, seconds);

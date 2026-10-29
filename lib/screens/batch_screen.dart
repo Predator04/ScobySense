@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/brew_cycle.dart';
 import '../services/appsync_client.dart';
 import '../services/auth_service.dart';
+import '../services/demo_data.dart';
+import '../services/demo_mode.dart';
 import '../services/errors.dart';
 import '../services/prefs.dart';
 import '../theme.dart';
@@ -31,8 +33,15 @@ class _BatchScreenState extends State<BatchScreen> {
   @override
   void initState() {
     super.initState();
-    _future = _client.brewCycleReport(widget.deviceId);
+    _future = _load();
     _loadTimeFormat();
+  }
+
+  Future<BrewCycleReport> _load() {
+    if (DemoMode.active) {
+      return Future.value(DemoData.brewCycleReport());
+    }
+    return _client.brewCycleReport(widget.deviceId);
   }
 
   Future<void> _loadTimeFormat() async {
@@ -41,7 +50,7 @@ class _BatchScreenState extends State<BatchScreen> {
   }
 
   Future<void> _refresh() async {
-    final f = _client.brewCycleReport(widget.deviceId);
+    final f = _load();
     setState(() => _future = f);
     try {
       await f;
@@ -72,6 +81,10 @@ class _BatchScreenState extends State<BatchScreen> {
       ),
     );
     if (text == null) return;
+    if (DemoMode.active) {
+      _snack('Demo mode — note not saved.');
+      return;
+    }
     try {
       await _client.updateBrewCycleEventNotes(stage.id, text);
       if (!mounted) return;

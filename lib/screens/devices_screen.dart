@@ -3,6 +3,8 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/appsync_client.dart';
+import '../services/demo_data.dart';
+import '../services/demo_mode.dart';
 import '../services/errors.dart';
 import '../services/prefs.dart';
 import '../services/update_service.dart';
@@ -36,11 +38,18 @@ class _DevicesScreenState extends State<DevicesScreen> {
   @override
   void initState() {
     super.initState();
-    _future = _client.listDevices();
+    _future = _loadDevices();
     _loadLocalNames();
     _connSub =
         Connectivity().onConnectivityChanged.listen(_handleConnectivity);
     Connectivity().checkConnectivity().then(_handleConnectivity);
+  }
+
+  Future<List<BrewerDevice>> _loadDevices() {
+    if (DemoMode.active) {
+      return Future.value(DemoData.listDevices());
+    }
+    return _client.listDevices();
   }
 
   Future<void> _loadLocalNames() async {
@@ -64,7 +73,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
   }
 
   Future<void> _refresh() async {
-    final f = _client.listDevices();
+    final f = _loadDevices();
     setState(() => _future = f);
     _loadLocalNames();
     try {
@@ -88,6 +97,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
   }
 
   Future<void> _logout() async {
+    DemoMode.active = false;
     await widget.auth.logout();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(MaterialPageRoute(
@@ -203,6 +213,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                           style: TextStyle(
                               fontSize: 26, fontWeight: FontWeight.w700)),
                     ),
+                    if (DemoMode.active) const _DemoBadge(),
                     TextButton.icon(
                       onPressed: () => Navigator.push(
                         context,
@@ -482,6 +493,32 @@ class _DeviceTile extends StatelessWidget {
           ),
           const Icon(Icons.chevron_right, color: AppTheme.textDim),
         ],
+      ),
+    );
+  }
+}
+
+class _DemoBadge extends StatelessWidget {
+  const _DemoBadge();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(right: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppTheme.accent2.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppTheme.accent2.withValues(alpha: 0.5)),
+      ),
+      child: const Text(
+        'DEMO',
+        style: TextStyle(
+          color: AppTheme.accent2,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
