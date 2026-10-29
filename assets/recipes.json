@@ -1,0 +1,71 @@
+{
+  "source": "thekombu.com",
+  "recipes": [
+    {
+      "slug": "ginger-bug",
+      "title": "Ginger Bug",
+      "type": "culture",
+      "url": "https://thekombu.com/blogs/journal/ginger-bug-recipe-fermenstation",
+      "ferment_temp_c": "26-30",
+      "summary": "Wild fermented culture: fresh ginger + sugar + water. Captures natural yeast/bacteria from ginger skin into a live starter that carbonates any sweetened liquid.",
+      "steps": [
+        "Day 1: 4 cups filtered water + 2 tbsp chopped ginger + 2 tbsp sugar, stir to dissolve, into Fermenstation jar with lid.",
+        "Days 2-7: feed daily with 1 tbsp ginger + 1 tbsp sugar, stir, re-cover.",
+        "Ready when small bubbles rise on stirring (days 3-4), tangy yeasty smell, lightly sour fizzy taste.",
+        "Harvest: strain, discard old ginger, reserve 200ml per soda batch, top up jar to 1L, feed 1 tbsp each.",
+        "Rest: fridge + feed 1 tbsp each once/week. Wake: feed + 12-24h in Fermenstation before use."
+      ],
+      "warning_signs": "Fuzzy mold (white/green/black/pink) or rotten smell = discard. Thin white film / cloudy liquid = normal.",
+      "soda": {
+        "title": "Ginger Bug Soda (ginger ale/beer)",
+        "makes": "4 x 700ml bottles",
+        "ingredients": {
+          "water": "3L filtered",
+          "ginger": "170g chopped, skin on, unwashed",
+          "sugar": "400g",
+          "lemon_peel": "17g",
+          "black_peppercorns": 10,
+          "allspice": 5,
+          "cloves": 2,
+          "lemon_juice": "140ml strained",
+          "ginger_bug_liquid": "200ml strained"
+        },
+        "steps": [
+          "Boil 1L water, add ginger/sugar/lemon peel/spices, simmer 5 min, steep until lukewarm.",
+          "Strain bug, measure 200ml, feed the rest.",
+          "Strain tea into pitcher, add remaining 2L water + lemon juice.",
+          "Add bug liquid, pour into 4x700ml bottles, 1 inch headspace, close tight.",
+          "F2 ferment 2-3 days, burp to check carbonation.",
+          "Chill fully before opening."
+        ]
+      }
+    },
+    {
+      "slug": "ginger-beer", "title": "Ginger Beer", "url": "https://thekombu.com/blogs/recipes/ginger-beer", "tag": "classic"
+    },
+    {
+      "slug": "old-thyme-pink-lemonade", "title": "Old Thyme Pink Lemonade", "url": "https://thekombu.com/blogs/recipes/old-thyme-pink-lemonade-1", "tag": "culinary"
+    },
+    {
+      "slug": "pineapple-popstar", "title": "Pineapple Popstar", "url": "https://thekombu.com/blogs/recipes/pineapple-popstar", "tag": "culinary"
+    },
+    {
+      "slug": "cherry-bomb", "title": "Cherry Bomb", "url": "https://thekombu.com/blogs/recipes/cherry-bomb", "tag": "adventurous"
+    },
+    {
+      "slug": "raspberry-trilogy", "title": "Raspberry Trilogy", "url": "https://thekombu.com/blogs/recipes/raspberry-trilogy", "tag": "adventurous"
+    },
+    {
+      "slug": "smokey-margarita", "title": "Smokey Margarita", "url": "https://thekombu.com/blogs/recipes/smokey-margarita", "tag": "adventurous"
+    },
+    {
+      "slug": "la-fruit-cart", "title": "L.A. Fruit Cart", "url": "https://thekombu.com/blogs/recipes/l-a-fruit-cart", "tag": "culinary"
+    },
+    {
+      "slug": "tropical-hops", "title": "Tropical Hops", "url": "https://thekombu.com/blogs/recipes/tropical-hops", "tag": "adventurous"
+    },
+    {
+      "slug": "blue-sapphire", "title": "Blue Sapphire", "url": "https://thekombu.com/blogs/recipes/blue-sapphire", "tag": "adventurous"
+    }
+  ]
+}
