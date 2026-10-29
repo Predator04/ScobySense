@@ -1,7 +1,7 @@
 name: scobysense
 description: ScobySense — kombucha brewer companion (community client for the Fermenstation).
 publish_to: 'none'
-version: 0.5.4+18
+version: 0.5.5+19
 
 environment:
   sdk: ^3.7.2

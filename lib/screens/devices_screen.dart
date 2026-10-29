@@ -6,9 +6,11 @@ import '../services/appsync_client.dart';
 import '../services/errors.dart';
 import '../services/prefs.dart';
 import '../services/update_service.dart';
+import '../services/update_state.dart';
 import '../models/device.dart';
 import '../theme.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/update_dialog.dart';
 import 'device_screen.dart';
 import 'recipes_screen.dart';
 import 'settings_screen.dart';
@@ -29,6 +31,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
   bool _offline = false;
   Map<String, String> _localNames = const {};
   late final StreamSubscription<List<ConnectivityResult>> _connSub;
+  bool _updateBannerDismissed = false;
 
   @override
   void initState() {
@@ -223,6 +226,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   ],
                 ),
               ),
+              _updateBanner(),
               if (_offline)
                 const OfflineBanner(
                     message: 'Offline — showing last known state.'),
@@ -292,10 +296,106 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   ),
                 ),
               ),
+              _versionFooter(),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _updateBanner() {
+    return ValueListenableBuilder<ReleaseInfo?>(
+      valueListenable: UpdateState.available,
+      builder: (context, release, _) {
+        if (release == null || _updateBannerDismissed) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+          child: GlassCard(
+            padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                final current = UpdateState.version.value;
+                showUpdateFlow(
+                  context,
+                  widget.updater,
+                  release,
+                  currentVersion: current.isEmpty ? release.tag : current,
+                );
+              },
+              child: Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: KombuTheme.accent.withValues(alpha: 0.14),
+                      border: Border.all(
+                          color: KombuTheme.accent.withValues(alpha: 0.4)),
+                    ),
+                    child: const Icon(Icons.system_update_alt,
+                        color: KombuTheme.accent, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Update available — v${release.version}',
+                          style: const TextStyle(
+                              color: KombuTheme.accent,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'tap to download',
+                          style: TextStyle(
+                              color: KombuTheme.textDim, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Dismiss',
+                    icon: const Icon(Icons.close,
+                        color: KombuTheme.textDim, size: 18),
+                    onPressed: () =>
+                        setState(() => _updateBannerDismissed = true),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _versionFooter() {
+    return ValueListenableBuilder<String>(
+      valueListenable: UpdateState.version,
+      builder: (context, version, _) {
+        if (version.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: 6, bottom: 10),
+          child: Center(
+            child: Text(
+              'v$version',
+              style: TextStyle(
+                fontSize: 11,
+                color: KombuTheme.textDim.withValues(alpha: 0.6),
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }
