@@ -5,10 +5,10 @@ import 'screens/terms_screen.dart';
 import 'services/auth_service.dart';
 import 'services/prefs.dart';
 import 'services/update_service.dart';
+import 'services/update_state.dart';
 import 'services/errors.dart';
 import 'services/notification_service.dart';
 import 'theme.dart';
-import 'widgets/update_dialog.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +17,6 @@ Future<void> main() async {
 }
 
 final navigatorKey = GlobalKey<NavigatorState>();
-final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 class ScobySenseApp extends StatefulWidget {
   const ScobySenseApp({super.key});
@@ -41,60 +40,15 @@ class _ScobySenseAppState extends State<ScobySenseApp> {
     if (_updateChecked) return;
     _updateChecked = true;
     try {
-      final release = await _updater.checkForUpdate();
-      if (release == null) return;
       final info = await _updater.packageInfo();
-      final currentVersion = '${info.version}+${info.buildNumber}';
-      _showUpdateBanner(release, currentVersion);
+      UpdateState.version.value = info.version;
+      final release = await _updater.checkForUpdate();
+      UpdateState.available.value = release;
     } on AppFailure {
       // Silent on launch; Settings has an explicit button that surfaces errors.
     } catch (_) {
       // Same.
     }
-  }
-
-  void _showUpdateBanner(ReleaseInfo release, String currentVersion) {
-    final messenger = scaffoldMessengerKey.currentState;
-    if (messenger == null) return;
-    messenger.clearMaterialBanners();
-    messenger.showMaterialBanner(
-      MaterialBanner(
-        backgroundColor: AppTheme.bg2,
-        dividerColor: Colors.white.withValues(alpha: 0.08),
-        leading: const Icon(
-          Icons.system_update_alt,
-          color: AppTheme.accent,
-        ),
-        content: InkWell(
-          onTap: () {
-            scaffoldMessengerKey.currentState?.hideCurrentMaterialBanner();
-            final ctx = navigatorKey.currentContext;
-            if (ctx == null || !ctx.mounted) return;
-            showUpdateFlow(
-              ctx,
-              _updater,
-              release,
-              currentVersion: currentVersion,
-            );
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Text(
-              'Update available — v${release.version} (tap to download)',
-              style: const TextStyle(color: AppTheme.text),
-            ),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.close, color: AppTheme.textDim),
-            tooltip: 'Dismiss',
-            onPressed: () =>
-                scaffoldMessengerKey.currentState?.hideCurrentMaterialBanner(),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
@@ -104,7 +58,6 @@ class _ScobySenseAppState extends State<ScobySenseApp> {
       title: 'ScobySense',
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
-      scaffoldMessengerKey: scaffoldMessengerKey,
       theme: AppTheme.build(),
       home: _Boot(auth: _auth, updater: _updater),
     );

@@ -279,6 +279,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                               MaterialPageRoute(
                                 builder: (_) => DeviceScreen(
                                   auth: widget.auth,
+                                  updater: widget.updater,
                                   initial: devices[i],
                                 ),
                               ),
