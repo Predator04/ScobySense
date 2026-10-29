@@ -17,6 +17,7 @@ Future<void> main() async {
 }
 
 final navigatorKey = GlobalKey<NavigatorState>();
+final scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
 
 class KombuApp extends StatefulWidget {
   const KombuApp({super.key});
@@ -43,19 +44,57 @@ class _KombuAppState extends State<KombuApp> {
       final release = await _updater.checkForUpdate();
       if (release == null) return;
       final info = await _updater.packageInfo();
-      final ctx = navigatorKey.currentContext;
-      if (ctx == null || !ctx.mounted) return;
-      await showUpdateFlow(
-        ctx,
-        _updater,
-        release,
-        currentVersion: '${info.version}+${info.buildNumber}',
-      );
+      final currentVersion = '${info.version}+${info.buildNumber}';
+      _showUpdateBanner(release, currentVersion);
     } on KombuFailure {
       // Silent on launch; Settings has an explicit button that surfaces errors.
     } catch (_) {
       // Same.
     }
+  }
+
+  void _showUpdateBanner(ReleaseInfo release, String currentVersion) {
+    final messenger = scaffoldMessengerKey.currentState;
+    if (messenger == null) return;
+    messenger.clearMaterialBanners();
+    messenger.showMaterialBanner(
+      MaterialBanner(
+        backgroundColor: KombuTheme.bg2,
+        dividerColor: Colors.white.withValues(alpha: 0.08),
+        leading: const Icon(
+          Icons.system_update_alt,
+          color: KombuTheme.accent,
+        ),
+        content: InkWell(
+          onTap: () {
+            scaffoldMessengerKey.currentState?.hideCurrentMaterialBanner();
+            final ctx = navigatorKey.currentContext;
+            if (ctx == null || !ctx.mounted) return;
+            showUpdateFlow(
+              ctx,
+              _updater,
+              release,
+              currentVersion: currentVersion,
+            );
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Text(
+              'Update available — v${release.version} (tap to download)',
+              style: const TextStyle(color: KombuTheme.text),
+            ),
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.close, color: KombuTheme.textDim),
+            tooltip: 'Dismiss',
+            onPressed: () =>
+                scaffoldMessengerKey.currentState?.hideCurrentMaterialBanner(),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -65,6 +104,7 @@ class _KombuAppState extends State<KombuApp> {
       title: 'ScobySense',
       debugShowCheckedModeBanner: false,
       navigatorKey: navigatorKey,
+      scaffoldMessengerKey: scaffoldMessengerKey,
       theme: KombuTheme.build(),
       home: _Boot(auth: _auth, updater: _updater),
     );
