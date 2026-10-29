@@ -69,6 +69,16 @@ class _RecipesScreenState extends State<RecipesScreen> {
     }
   }
 
+  Future<void> _openEdit(Map<String, dynamic> r) async {
+    final saved = await Navigator.push<bool?>(
+      context,
+      MaterialPageRoute(builder: (_) => AddRecipeScreen(initial: r)),
+    );
+    if (saved == true) {
+      await _load();
+    }
+  }
+
   Future<void> _confirmDelete(Map<String, dynamic> r) async {
     final isCustom = r['custom'] == true;
     final title = (r['title'] ?? r['slug'] ?? 'this recipe').toString();
@@ -175,6 +185,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                             final r = _filtered[i];
                             return _RecipeCard(
                               data: r,
+                              onEdit: () => _openEdit(r),
                               onDelete: () => _confirmDelete(r),
                             );
                           },
@@ -220,8 +231,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
 
 class _RecipeCard extends StatelessWidget {
   final Map<String, dynamic> data;
+  final VoidCallback onEdit;
   final VoidCallback onDelete;
-  const _RecipeCard({required this.data, required this.onDelete});
+  const _RecipeCard({
+    required this.data,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -295,6 +311,12 @@ class _RecipeCard extends StatelessWidget {
                         fontWeight: FontWeight.w600)),
               ],
             ),
+          ),
+          IconButton(
+            tooltip: 'Edit recipe',
+            icon: const Icon(Icons.edit_outlined,
+                color: KombuTheme.accent, size: 20),
+            onPressed: onEdit,
           ),
           IconButton(
             tooltip: 'Delete recipe',

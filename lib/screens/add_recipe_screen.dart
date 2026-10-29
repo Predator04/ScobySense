@@ -4,7 +4,8 @@ import '../theme.dart';
 import '../widgets/glass_card.dart';
 
 class AddRecipeScreen extends StatefulWidget {
-  const AddRecipeScreen({super.key});
+  final Map<String, dynamic>? initial;
+  const AddRecipeScreen({super.key, this.initial});
 
   @override
   State<AddRecipeScreen> createState() => _AddRecipeScreenState();
@@ -20,6 +21,25 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   final _warnings = TextEditingController();
   final _store = RecipeStore();
   bool _saving = false;
+
+  bool get _isEditing => widget.initial != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final initial = widget.initial;
+    if (initial != null) {
+      _title.text = (initial['title'] ?? '').toString();
+      _type.text = (initial['type'] ?? '').toString();
+      _fermentTemp.text = (initial['ferment_temp'] ?? '').toString();
+      _summary.text = (initial['summary'] ?? '').toString();
+      final rawSteps = initial['steps'];
+      if (rawSteps is List) {
+        _steps.text = rawSteps.map((s) => s.toString()).join('\n');
+      }
+      _warnings.text = (initial['warning_signs'] ?? '').toString();
+    }
+  }
 
   @override
   void dispose() {
@@ -45,18 +65,40 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
         .map((s) => s.trim())
         .where((s) => s.isNotEmpty)
         .toList();
-    final recipe = <String, dynamic>{
-      'slug': RecipeStore.slugify(_title.text.trim()),
-      'title': _title.text.trim(),
-      if (_type.text.trim().isNotEmpty) 'type': _type.text.trim(),
-      if (_fermentTemp.text.trim().isNotEmpty)
-        'ferment_temp': _fermentTemp.text.trim(),
-      if (_summary.text.trim().isNotEmpty) 'summary': _summary.text.trim(),
-      if (steps.isNotEmpty) 'steps': steps,
-      if (warnings.isNotEmpty) 'warning_signs': warnings.join('\n'),
-      'soda': false,
-    };
-    await _store.addCustom(recipe);
+
+    final base = _isEditing
+        ? (Map<String, dynamic>.from(widget.initial!)..remove('custom'))
+        : <String, dynamic>{'soda': false};
+
+    base['slug'] = _isEditing
+        ? widget.initial!['slug']
+        : RecipeStore.slugify(_title.text.trim());
+    base['title'] = _title.text.trim();
+
+    void setOrClear(String key, String value) {
+      if (value.isEmpty) {
+        base.remove(key);
+      } else {
+        base[key] = value;
+      }
+    }
+
+    setOrClear('type', _type.text.trim());
+    setOrClear('ferment_temp', _fermentTemp.text.trim());
+    setOrClear('summary', _summary.text.trim());
+
+    if (steps.isEmpty) {
+      base.remove('steps');
+    } else {
+      base['steps'] = steps;
+    }
+    if (warnings.isEmpty) {
+      base.remove('warning_signs');
+    } else {
+      base['warning_signs'] = warnings.join('\n');
+    }
+
+    await _store.upsertCustom(base);
     if (!mounted) return;
     Navigator.pop(context, true);
   }
@@ -64,7 +106,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Add recipe')),
+      appBar: AppBar(title: Text(_isEditing ? 'Edit recipe' : 'Add recipe')),
       body: KombuBackground(
         child: SafeArea(
           child: Form(
@@ -142,7 +184,9 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                 ElevatedButton.icon(
                   onPressed: _saving ? null : _save,
                   icon: const Icon(Icons.save, size: 18),
-                  label: Text(_saving ? 'Saving…' : 'Save recipe'),
+                  label: Text(_saving
+                      ? 'Saving…'
+                      : (_isEditing ? 'Save changes' : 'Save recipe')),
                 ),
                 const SizedBox(height: 10),
                 OutlinedButton(
