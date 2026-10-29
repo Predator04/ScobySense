@@ -8,14 +8,18 @@ class CommandService {
   final AppSyncClient client;
   CommandService(this.client);
 
-  Future<bool> setBrewTimer(String deviceId, String side, int days) {
+  Future<bool> setBrewTimerSeconds(
+      String deviceId, String side, int totalSeconds) {
     return client.pushCommand(commandTopic(deviceId), {
       'command': 'set_heater',
       'cmd_id': _cmdId(),
       'target': side,
-      'params': {'remaining_time': days * 86400},
+      'params': {'remaining_time': totalSeconds},
     });
   }
+
+  Future<bool> setBrewTimer(String deviceId, String side, int days) =>
+      setBrewTimerSeconds(deviceId, side, days * 86400);
 
   Future<bool> stopBrew(String deviceId, String side) {
     return client.pushCommand(commandTopic(deviceId), {

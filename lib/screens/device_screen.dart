@@ -58,8 +58,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
   String _unit = 'F';
   bool _use24Hour = false;
   String? _localName;
-  int _f1Days = AppPrefs.defaultF1Days;
-  int _f2Days = AppPrefs.defaultF2Days;
+  int _f1Seconds = AppPrefs.defaultBrewSeconds('F1');
+  int _f2Seconds = AppPrefs.defaultBrewSeconds('F2');
   bool _updateBannerDismissed = false;
 
   @override
@@ -70,7 +70,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
     _loadHistory();
     _loadAlertRules();
     _loadLocalName();
-    _loadBrewDays();
+    _loadBrewSeconds();
     _refresh();
     _poll = Timer.periodic(const Duration(seconds: 60), (_) => _refresh());
     // Keep the countdown fresh between polls.
@@ -153,15 +153,28 @@ class _DeviceScreenState extends State<DeviceScreen> {
     if (mounted) setState(() => _localName = n);
   }
 
-  Future<void> _loadBrewDays() async {
-    final f1 = await AppPrefs.brewDays(_device.deviceId, 'F1');
-    final f2 = await AppPrefs.brewDays(_device.deviceId, 'F2');
+  Future<void> _loadBrewSeconds() async {
+    final f1 = await AppPrefs.brewSeconds(_device.deviceId, 'F1');
+    final f2 = await AppPrefs.brewSeconds(_device.deviceId, 'F2');
     if (mounted) {
       setState(() {
-        _f1Days = f1;
-        _f2Days = f2;
+        _f1Seconds = f1;
+        _f2Seconds = f2;
       });
     }
+  }
+
+  static String _humanizeDuration(int totalSeconds) {
+    if (totalSeconds <= 0) return '0m';
+    final d = totalSeconds ~/ 86400;
+    final h = (totalSeconds % 86400) ~/ 3600;
+    final m = (totalSeconds % 3600) ~/ 60;
+    final parts = <String>[];
+    if (d > 0) parts.add('${d}d');
+    if (h > 0) parts.add('${h}h');
+    if (m > 0) parts.add('${m}m');
+    if (parts.isEmpty) parts.add('<1m');
+    return parts.join(' ');
   }
 
   String get _displayName {
@@ -391,10 +404,10 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
   Future<void> _showBrewDurationSheet(String side) async {
     final isF1 = side.toUpperCase() == 'F1';
-    final minDays = 1;
-    final maxDays = 30;
-    final current = isF1 ? _f1Days : _f2Days;
-    int selected = current.clamp(minDays, maxDays);
+    final currentSeconds = isF1 ? _f1Seconds : _f2Seconds;
+    int days = (currentSeconds ~/ 86400).clamp(0, 30);
+    int hours = ((currentSeconds % 86400) ~/ 3600).clamp(0, 23);
+    int minutes = ((currentSeconds % 3600) ~/ 60).clamp(0, 59);
     final sideOn = isF1 ? _device.f1On : _device.f2On;
 
     await showModalBottomSheet<void>(
@@ -405,7 +418,10 @@ class _DeviceScreenState extends State<DeviceScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheet) => Padding(
+        builder: (ctx, setSheet) {
+          final totalSeconds = days * 86400 + hours * 3600 + minutes * 60;
+          final canStart = totalSeconds > 0;
+          return Padding(
           padding: EdgeInsets.only(
             left: 20,
             right: 20,
@@ -442,40 +458,58 @@ class _DeviceScreenState extends State<DeviceScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Currently saved: $current ${current == 1 ? "day" : "days"} '
-                '(range $minDays–$maxDays)',
+                'Currently saved: ${_humanizeDuration(currentSeconds)}',
                 style: const TextStyle(
                     color: AppTheme.textDim, fontSize: 12),
               ),
               const SizedBox(height: 16),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [
-                  for (int d = minDays; d <= maxDays; d++)
-                    ChoiceChip(
-                      label: Text('${d}d'),
-                      selected: selected == d,
-                      onSelected: (_) => setSheet(() => selected = d),
-                      selectedColor:
-                          AppTheme.accent.withValues(alpha: 0.25),
-                      labelStyle: TextStyle(
-                        color: selected == d
-                            ? AppTheme.accent
-                            : AppTheme.text,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      backgroundColor:
-                          Colors.white.withValues(alpha: 0.05),
-                      shape: StadiumBorder(
-                        side: BorderSide(
-                          color: selected == d
-                              ? AppTheme.accent
-                              : Colors.white.withValues(alpha: 0.12),
-                        ),
-                      ),
-                    ),
-                ],
+              _DurationStepper(
+                label: 'Days',
+                value: days,
+                min: 0,
+                max: 30,
+                onChanged: (v) => setSheet(() => days = v),
+              ),
+              const SizedBox(height: 10),
+              _DurationStepper(
+                label: 'Hours',
+                value: hours,
+                min: 0,
+                max: 23,
+                onChanged: (v) => setSheet(() => hours = v),
+              ),
+              const SizedBox(height: 10),
+              _DurationStepper(
+                label: 'Minutes',
+                value: minutes,
+                min: 0,
+                max: 59,
+                onChanged: (v) => setSheet(() => minutes = v),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: AppTheme.accent.withValues(alpha: 0.08),
+                  border: Border.all(
+                      color: AppTheme.accent.withValues(alpha: 0.3)),
+                ),
+                child: Text(
+                  canStart
+                      ? 'Total: ${_humanizeDuration(totalSeconds)} '
+                          '(${(totalSeconds / 86400).toStringAsFixed(2)} days)'
+                      : 'Set at least 1 minute to start a brew',
+                  style: TextStyle(
+                    color: canStart
+                        ? AppTheme.accent
+                        : AppTheme.textDim,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
               const SizedBox(height: 14),
               if (sideOn) ...[
@@ -539,52 +573,59 @@ class _DeviceScreenState extends State<DeviceScreen> {
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () async {
-                        await AppPrefs.setBrewDays(
-                            _device.deviceId, side, selected);
-                        if (!ctx.mounted) return;
-                        Navigator.pop(ctx);
-                        if (!mounted) return;
-                        setState(() {
-                          if (isF1) {
-                            _f1Days = selected;
-                          } else {
-                            _f2Days = selected;
-                          }
-                        });
-                        final messenger = ScaffoldMessenger.of(context);
-                        try {
-                          await _cmd.setBrewTimer(
-                              _device.deviceId, side, selected);
-                          if (!mounted) return;
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  '$side brew started: ${selected}d'),
-                            ),
-                          );
-                          setState(() => _ack = '$side brew $selected d sent');
-                        } on AppFailure catch (e) {
-                          if (!mounted) return;
-                          messenger.showSnackBar(
-                            SnackBar(
-                              backgroundColor: AppTheme.danger,
-                              content:
-                                  Text('$side brew failed: ${e.message}'),
-                            ),
-                          );
-                          setState(() => _err = '$side brew: ${e.message}');
-                        } catch (e) {
-                          if (!mounted) return;
-                          messenger.showSnackBar(
-                            SnackBar(
-                              backgroundColor: AppTheme.danger,
-                              content: Text('$side brew failed: $e'),
-                            ),
-                          );
-                          setState(() => _err = '$side brew: $e');
-                        }
-                      },
+                      onPressed: !canStart
+                          ? null
+                          : () async {
+                              await AppPrefs.setBrewSeconds(
+                                  _device.deviceId, side, totalSeconds);
+                              if (!ctx.mounted) return;
+                              Navigator.pop(ctx);
+                              if (!mounted) return;
+                              setState(() {
+                                if (isF1) {
+                                  _f1Seconds = totalSeconds;
+                                } else {
+                                  _f2Seconds = totalSeconds;
+                                }
+                              });
+                              final messenger =
+                                  ScaffoldMessenger.of(context);
+                              final human =
+                                  _humanizeDuration(totalSeconds);
+                              try {
+                                await _cmd.setBrewTimerSeconds(
+                                    _device.deviceId, side, totalSeconds);
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                        '$side brew started: $human'),
+                                  ),
+                                );
+                                setState(() =>
+                                    _ack = '$side brew $human sent');
+                              } on AppFailure catch (e) {
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: AppTheme.danger,
+                                    content: Text(
+                                        '$side brew failed: ${e.message}'),
+                                  ),
+                                );
+                                setState(() =>
+                                    _err = '$side brew: ${e.message}');
+                              } catch (e) {
+                                if (!mounted) return;
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    backgroundColor: AppTheme.danger,
+                                    content: Text('$side brew failed: $e'),
+                                  ),
+                                );
+                                setState(() => _err = '$side brew: $e');
+                              }
+                            },
                       child: const Text('Start brew'),
                     ),
                   ),
@@ -592,7 +633,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
               ),
             ],
           ),
-        ),
+        );
+        },
       ),
     );
   }
@@ -682,7 +724,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
                   valueTop: ft(_device.f1Temp),
                   valueBot: _device.f1On ? 'HEATING' : 'off',
                   accent: _device.f1On,
-                  footer: 'Brew: ${_f1Days}d · tap to change',
+                  footer:
+                      'Brew: ${_humanizeDuration(_f1Seconds)} · tap to change',
                   onTap: () => _showBrewDurationSheet('F1'),
                 ),
               ),
@@ -693,7 +736,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
                   valueTop: ft(_device.f2Temp),
                   valueBot: _device.f2On ? 'HEATING' : 'off',
                   accent: _device.f2On,
-                  footer: 'Brew: ${_f2Days}d · tap to change',
+                  footer:
+                      'Brew: ${_humanizeDuration(_f2Seconds)} · tap to change',
                   onTap: () => _showBrewDurationSheet('F2'),
                 ),
               ),
@@ -925,14 +969,18 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  _btn('Start F1 (${_f1Days}d)',
-                      () => _run('Start F1 ${_f1Days}d',
-                          () => _cmd.setBrewTimer(
-                              _device.deviceId, 'F1', _f1Days))),
-                  _btn('Start F2 (${_f2Days}d)',
-                      () => _run('Start F2 ${_f2Days}d',
-                          () => _cmd.setBrewTimer(
-                              _device.deviceId, 'F2', _f2Days))),
+                  _btn(
+                      'Start F1 (${_humanizeDuration(_f1Seconds)})',
+                      () => _run(
+                          'Start F1 ${_humanizeDuration(_f1Seconds)}',
+                          () => _cmd.setBrewTimerSeconds(
+                              _device.deviceId, 'F1', _f1Seconds))),
+                  _btn(
+                      'Start F2 (${_humanizeDuration(_f2Seconds)})',
+                      () => _run(
+                          'Start F2 ${_humanizeDuration(_f2Seconds)}',
+                          () => _cmd.setBrewTimerSeconds(
+                              _device.deviceId, 'F2', _f2Seconds))),
                   _btn('Sound on',
                       () => _run('Sound on',
                           () => _cmd.setSound(_device.deviceId, true))),
@@ -1287,6 +1335,107 @@ class _Recipes3DButtonState extends State<_Recipes3DButton> {
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DurationStepper extends StatelessWidget {
+  final String label;
+  final int value;
+  final int min;
+  final int max;
+  final ValueChanged<int> onChanged;
+  const _DurationStepper({
+    required this.label,
+    required this.value,
+    required this.min,
+    required this.max,
+    required this.onChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final canDec = value > min;
+    final canInc = value < max;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        color: Colors.white.withValues(alpha: 0.04),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w600, fontSize: 14)),
+                Text('$min–$max',
+                    style: const TextStyle(
+                        color: AppTheme.textDim, fontSize: 11)),
+              ],
+            ),
+          ),
+          _StepBtn(
+            icon: Icons.remove,
+            onTap: canDec ? () => onChanged(value - 1) : null,
+          ),
+          Container(
+            constraints: const BoxConstraints(minWidth: 44),
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: Text(
+              '$value',
+              style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.text),
+            ),
+          ),
+          _StepBtn(
+            icon: Icons.add,
+            onTap: canInc ? () => onChanged(value + 1) : null,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _StepBtn extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+  const _StepBtn({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(10),
+      child: Container(
+        width: 36,
+        height: 36,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: enabled
+              ? AppTheme.accent.withValues(alpha: 0.14)
+              : Colors.white.withValues(alpha: 0.04),
+          border: Border.all(
+            color: enabled
+                ? AppTheme.accent.withValues(alpha: 0.5)
+                : Colors.white.withValues(alpha: 0.1),
+          ),
+        ),
+        child: Icon(
+          icon,
+          size: 18,
+          color: enabled ? AppTheme.accent : AppTheme.textDim,
         ),
       ),
     );
