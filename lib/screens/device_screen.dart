@@ -686,7 +686,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
   String _wifiLabel(bool online) {
     final connected = _device.wifiConnected ?? false;
     if (connected) return 'connected';
-    if (online) return 'offline (still reachable via cloud)';
+    if (online) return 'offline · via cloud';
     return 'offline';
   }
 
