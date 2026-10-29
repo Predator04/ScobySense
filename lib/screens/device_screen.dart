@@ -395,6 +395,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
     final maxDays = 30;
     final current = isF1 ? _f1Days : _f2Days;
     int selected = current.clamp(minDays, maxDays);
+    final sideOn = isF1 ? _device.f1On : _device.f2On;
 
     await showModalBottomSheet<void>(
       context: context,
@@ -477,6 +478,56 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 ],
               ),
               const SizedBox(height: 14),
+              if (sideOn) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      Navigator.pop(ctx);
+                      if (!mounted) return;
+                      final messenger = ScaffoldMessenger.of(context);
+                      try {
+                        await _cmd.stopBrew(_device.deviceId, side);
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(content: Text('$side turned off')),
+                        );
+                        setState(() => _ack = '$side turned off');
+                        await _refresh();
+                      } on KombuFailure catch (e) {
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(
+                            backgroundColor: KombuTheme.danger,
+                            content:
+                                Text('$side turn off failed: ${e.message}'),
+                          ),
+                        );
+                        setState(() => _err = '$side turn off: ${e.message}');
+                      } catch (e) {
+                        if (!mounted) return;
+                        messenger.showSnackBar(
+                          SnackBar(
+                            backgroundColor: KombuTheme.danger,
+                            content: Text('$side turn off failed: $e'),
+                          ),
+                        );
+                        setState(() => _err = '$side turn off: $e');
+                      }
+                    },
+                    icon: const Icon(Icons.power_settings_new,
+                        color: KombuTheme.danger, size: 18),
+                    label: const Text('Turn off',
+                        style: TextStyle(color: KombuTheme.danger)),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                          color: KombuTheme.danger.withValues(alpha: 0.6)),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
+              ],
               Row(
                 children: [
                   Expanded(
