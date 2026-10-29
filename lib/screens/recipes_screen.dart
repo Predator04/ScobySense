@@ -14,6 +14,8 @@ class RecipesScreen extends StatefulWidget {
 class _RecipesScreenState extends State<RecipesScreen> {
   final _store = RecipeStore();
   List<Map<String, dynamic>> _all = const [];
+  List<String> _categories = const [];
+  Map<String, String> _renames = const {};
   String _query = '';
   String? _tag;
   bool _loading = true;
@@ -28,8 +30,13 @@ class _RecipesScreenState extends State<RecipesScreen> {
   Future<void> _load() async {
     try {
       final items = await _store.loadMerged();
+      final renames = await _store.loadRenames();
+      final cats = await _store.listCategories();
       setState(() {
         _all = items;
+        _renames = renames;
+        _categories = cats;
+        if (_tag != null && !cats.contains(_tag)) _tag = null;
         _loading = false;
       });
     } catch (e) {
@@ -40,18 +47,15 @@ class _RecipesScreenState extends State<RecipesScreen> {
     }
   }
 
-  List<String> get _tags {
-    final set = <String>{};
-    for (final r in _all) {
-      final t = r['tag'] as String?;
-      if (t != null) set.add(t);
-    }
-    return set.toList()..sort();
+  String? _tagOf(Map<String, dynamic> r) {
+    final raw = r['tag']?.toString();
+    if (raw == null || raw.isEmpty) return null;
+    return _store.effectiveTag(raw, _renames);
   }
 
   List<Map<String, dynamic>> get _filtered {
     return _all.where((r) {
-      if (_tag != null && r['tag'] != _tag) return false;
+      if (_tag != null && _tagOf(r) != _tag) return false;
       if (_query.isEmpty) return true;
       final hay = '${r['title']} ${r['summary'] ?? ''} ${r['slug']}'
           .toLowerCase();
@@ -116,6 +120,19 @@ class _RecipesScreenState extends State<RecipesScreen> {
     }
   }
 
+  Future<void> _openManageCategories() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.bg2,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) => _ManageCategoriesSheet(store: _store),
+    );
+    await _load();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -158,22 +175,40 @@ class _RecipesScreenState extends State<RecipesScreen> {
                           onChanged: (v) => setState(() => _query = v),
                         ),
                       ),
-                      if (_tags.isNotEmpty)
-                        SizedBox(
-                          height: 48,
-                          child: ListView(
-                            scrollDirection: Axis.horizontal,
-                            padding:
-                                const EdgeInsets.symmetric(horizontal: 12),
-                            children: [
-                              _tagChip('all', _tag == null,
-                                  () => setState(() => _tag = null)),
-                              for (final t in _tags)
-                                _tagChip(t, _tag == t,
-                                    () => setState(() => _tag = t)),
-                            ],
-                          ),
+                      SizedBox(
+                        height: 48,
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: ListView(
+                                scrollDirection: Axis.horizontal,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                children: [
+                                  _tagChip('all', _tag == null,
+                                      () => setState(() => _tag = null)),
+                                  for (final t in _categories)
+                                    _tagChip(t, _tag == t,
+                                        () => setState(() => _tag = t)),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(right: 8),
+                              child: TextButton.icon(
+                                onPressed: _openManageCategories,
+                                icon: const Icon(Icons.edit_outlined,
+                                    size: 16, color: AppTheme.accent),
+                                label: const Text('Manage',
+                                    style: TextStyle(
+                                        color: AppTheme.accent,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 12)),
+                              ),
+                            ),
+                          ],
                         ),
+                      ),
                       Expanded(
                         child: ListView.separated(
                           padding:
@@ -185,6 +220,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
                             final r = _filtered[i];
                             return _RecipeCard(
                               data: r,
+                              displayTag: _tagOf(r),
                               onEdit: () => _openEdit(r),
                               onDelete: () => _confirmDelete(r),
                             );
@@ -229,12 +265,189 @@ class _RecipesScreenState extends State<RecipesScreen> {
   }
 }
 
+class _ManageCategoriesSheet extends StatefulWidget {
+  final RecipeStore store;
+  const _ManageCategoriesSheet({required this.store});
+
+  @override
+  State<_ManageCategoriesSheet> createState() => _ManageCategoriesSheetState();
+}
+
+class _ManageCategoriesSheetState extends State<_ManageCategoriesSheet> {
+  final _addCtl = TextEditingController();
+  List<String> _cats = const [];
+  bool _loading = true;
+  bool _busy = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _refresh();
+  }
+
+  @override
+  void dispose() {
+    _addCtl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    final cats = await widget.store.listCategories();
+    if (!mounted) return;
+    setState(() {
+      _cats = cats;
+      _loading = false;
+    });
+  }
+
+  Future<void> _add() async {
+    final name = _addCtl.text.trim();
+    if (name.isEmpty || _busy) return;
+    setState(() => _busy = true);
+    await widget.store.addCategory(name);
+    _addCtl.clear();
+    await _refresh();
+    if (mounted) setState(() => _busy = false);
+  }
+
+  Future<void> _rename(String old) async {
+    final ctl = TextEditingController(text: old);
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bg2,
+        title: const Text('Rename category'),
+        content: TextField(
+          controller: ctl,
+          autofocus: true,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(hintText: 'New name'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, ctl.text.trim()),
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+    ctl.dispose();
+    if (result == null || result.isEmpty || result == old) return;
+    setState(() => _busy = true);
+    await widget.store.renameCategory(old, result);
+    await _refresh();
+    if (mounted) setState(() => _busy = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final insets = MediaQuery.of(context).viewInsets;
+    return Padding(
+      padding: EdgeInsets.only(bottom: insets.bottom),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  const Expanded(
+                    child: Text('Manage categories',
+                        style: TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.w700)),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close, color: AppTheme.textDim),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _addCtl,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        hintText: 'New category name',
+                      ),
+                      onSubmitted: (_) => _add(),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    onPressed: _busy ? null : _add,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: const Text('Add'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              if (_loading)
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppTheme.accent),
+                  ),
+                )
+              else if (_cats.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text('No categories yet.',
+                      style: TextStyle(color: AppTheme.textDim)),
+                )
+              else
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: MediaQuery.of(context).size.height * 0.5,
+                  ),
+                  child: ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: _cats.length,
+                    separatorBuilder: (_, __) => const Divider(
+                      height: 1,
+                      color: Color(0x22FFFFFF),
+                    ),
+                    itemBuilder: (_, i) {
+                      final c = _cats[i];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(c,
+                            style: const TextStyle(color: AppTheme.text)),
+                        trailing: IconButton(
+                          tooltip: 'Rename',
+                          icon: const Icon(Icons.edit_outlined,
+                              color: AppTheme.accent, size: 20),
+                          onPressed: _busy ? null : () => _rename(c),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _RecipeCard extends StatelessWidget {
   final Map<String, dynamic> data;
+  final String? displayTag;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
   const _RecipeCard({
     required this.data,
+    required this.displayTag,
     required this.onEdit,
     required this.onDelete,
   });
@@ -282,7 +495,7 @@ class _RecipeCard extends StatelessWidget {
                             style: TextStyle(
                                 color: AppTheme.accent, fontSize: 10)),
                       ),
-                    if (data['tag'] != null)
+                    if (displayTag != null)
                       Container(
                         margin: const EdgeInsets.only(left: 6),
                         padding: const EdgeInsets.symmetric(
@@ -291,7 +504,7 @@ class _RecipeCard extends StatelessWidget {
                           color: AppTheme.accent2.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(999),
                         ),
-                        child: Text(data['tag'] as String,
+                        child: Text(displayTag!,
                             style: const TextStyle(
                                 color: AppTheme.accent2, fontSize: 10)),
                       ),

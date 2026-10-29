@@ -12,6 +12,8 @@ class AddRecipeScreen extends StatefulWidget {
 }
 
 class _AddRecipeScreenState extends State<AddRecipeScreen> {
+  static const String _kNewCategorySentinel = '__new__';
+
   final _formKey = GlobalKey<FormState>();
   final _title = TextEditingController();
   final _type = TextEditingController();
@@ -19,8 +21,13 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   final _summary = TextEditingController();
   final _steps = TextEditingController();
   final _warnings = TextEditingController();
+  final _newCategory = TextEditingController();
   final _store = RecipeStore();
   bool _saving = false;
+
+  List<String> _categories = const [];
+  // The dropdown value: null = "No category", a category name, or sentinel for a new one.
+  String? _selectedCategory;
 
   bool get _isEditing => widget.initial != null;
 
@@ -39,6 +46,21 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
       }
       _warnings.text = (initial['warning_signs'] ?? '').toString();
     }
+    _loadCategories();
+  }
+
+  Future<void> _loadCategories() async {
+    final cats = await _store.listCategories();
+    final renames = await _store.loadRenames();
+    if (!mounted) return;
+    setState(() {
+      _categories = cats;
+      final rawTag = widget.initial?['tag']?.toString();
+      if (rawTag != null && rawTag.isNotEmpty) {
+        final effective = _store.effectiveTag(rawTag, renames);
+        _selectedCategory = cats.contains(effective) ? effective : null;
+      }
+    });
   }
 
   @override
@@ -49,6 +71,7 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     _summary.dispose();
     _steps.dispose();
     _warnings.dispose();
+    _newCategory.dispose();
     super.dispose();
   }
 
@@ -86,6 +109,23 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
     setOrClear('type', _type.text.trim());
     setOrClear('ferment_temp', _fermentTemp.text.trim());
     setOrClear('summary', _summary.text.trim());
+
+    // Resolve category.
+    String? tag;
+    if (_selectedCategory == _kNewCategorySentinel) {
+      final n = _newCategory.text.trim();
+      if (n.isNotEmpty) {
+        await _store.addCategory(n);
+        tag = n;
+      }
+    } else if (_selectedCategory != null) {
+      tag = _selectedCategory;
+    }
+    if (tag == null || tag.isEmpty) {
+      base.remove('tag');
+    } else {
+      base['tag'] = tag;
+    }
 
     if (steps.isEmpty) {
       base.remove('steps');
@@ -127,6 +167,53 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
                         validator: (v) =>
                             (v == null || v.trim().isEmpty) ? 'Required' : null,
                       ),
+                      const SizedBox(height: 14),
+                      _label('Category'),
+                      DropdownButtonFormField<String?>(
+                        value: _selectedCategory,
+                        isExpanded: true,
+                        dropdownColor: AppTheme.bg2,
+                        decoration: const InputDecoration(
+                          hintText: 'No category',
+                        ),
+                        items: [
+                          const DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('No category'),
+                          ),
+                          for (final c in _categories)
+                            DropdownMenuItem<String?>(
+                              value: c,
+                              child: Text(c),
+                            ),
+                          const DropdownMenuItem<String?>(
+                            value: _kNewCategorySentinel,
+                            child: Text('+ New category…',
+                                style: TextStyle(color: AppTheme.accent)),
+                          ),
+                        ],
+                        onChanged: (v) =>
+                            setState(() => _selectedCategory = v),
+                      ),
+                      if (_selectedCategory == _kNewCategorySentinel) ...[
+                        const SizedBox(height: 10),
+                        TextFormField(
+                          controller: _newCategory,
+                          textCapitalization: TextCapitalization.words,
+                          decoration: const InputDecoration(
+                            hintText: 'New category name',
+                          ),
+                          validator: (v) {
+                            if (_selectedCategory != _kNewCategorySentinel) {
+                              return null;
+                            }
+                            if (v == null || v.trim().isEmpty) {
+                              return 'Enter a name';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
                       const SizedBox(height: 14),
                       _label('Type'),
                       TextFormField(
