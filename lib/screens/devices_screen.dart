@@ -93,9 +93,100 @@ class _DevicesScreenState extends State<DevicesScreen> {
     ));
   }
 
+  Future<void> _showAddDeviceSheet() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: AppTheme.bg2,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(
+          left: 20,
+          right: 20,
+          top: 20,
+          bottom: 20 + MediaQuery.of(ctx).viewInsets.bottom,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: AppTheme.accent.withValues(alpha: 0.14),
+                    border: Border.all(
+                        color: AppTheme.accent.withValues(alpha: 0.4)),
+                  ),
+                  child: const Icon(Icons.add_link,
+                      color: AppTheme.accent, size: 18),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Add another machine',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'To add another Fermenstation, pair it in the official SCOBYSENSE app '
+              'first (Bluetooth + WiFi setup). Once it is linked to your '
+              'account, it will appear here automatically.',
+              style: TextStyle(color: AppTheme.text, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'ScobySense supports multiple devices — every linked machine '
+              'shows as its own card on this screen.',
+              style: TextStyle(color: AppTheme.textDim, fontSize: 12),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(ctx).pop();
+                      _refresh();
+                    },
+                    icon: const Icon(Icons.refresh, size: 18),
+                    label: const Text('Refresh'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Close',
+                      style: TextStyle(color: AppTheme.textDim)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: _showAddDeviceSheet,
+        backgroundColor: AppTheme.accent,
+        foregroundColor: const Color(0xFF04070A),
+        icon: const Icon(Icons.add),
+        label: const Text('Add device',
+            style: TextStyle(fontWeight: FontWeight.w700)),
+      ),
       body: AppBackground(
         child: SafeArea(
           child: Column(
