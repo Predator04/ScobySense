@@ -13,6 +13,7 @@ import '../services/subscription_client.dart';
 import '../theme.dart';
 import '../utils/time_format.dart';
 import 'batch_screen.dart';
+import 'recipes_screen.dart';
 import 'schedule_screen.dart';
 import '../widgets/glass_card.dart';
 
@@ -287,6 +288,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               _statusCard(),
+              const SizedBox(height: 14),
+              _recipesButton(),
               const SizedBox(height: 14),
               _controlCard(),
               const SizedBox(height: 14),
@@ -729,6 +732,15 @@ class _DeviceScreenState extends State<DeviceScreen> {
     );
   }
 
+  Widget _recipesButton() {
+    return _Recipes3DButton(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const RecipesScreen()),
+      ),
+    );
+  }
+
   Widget _controlCard() {
     return GlassCard(
       child: Column(
@@ -961,6 +973,163 @@ class _LegendDot extends StatelessWidget {
       const SizedBox(width: 6),
       Text(label, style: const TextStyle(fontSize: 12)),
     ]);
+  }
+}
+
+class _Recipes3DButton extends StatefulWidget {
+  final VoidCallback onTap;
+  const _Recipes3DButton({required this.onTap});
+
+  @override
+  State<_Recipes3DButton> createState() => _Recipes3DButtonState();
+}
+
+class _Recipes3DButtonState extends State<_Recipes3DButton> {
+  bool _pressed = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      onPointerDown: (_) => setState(() => _pressed = true),
+      onPointerUp: (_) => setState(() => _pressed = false),
+      onPointerCancel: (_) => setState(() => _pressed = false),
+      child: AnimatedScale(
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.easeOut,
+        scale: _pressed ? 0.98 : 1.0,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(22),
+            boxShadow: [
+              BoxShadow(
+                color: KombuTheme.accent.withValues(alpha: _pressed ? 0.18 : 0.35),
+                blurRadius: _pressed ? 14 : 30,
+                spreadRadius: -4,
+                offset: Offset(0, _pressed ? 4 : 14),
+              ),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: _pressed ? 0.25 : 0.5),
+                blurRadius: _pressed ? 10 : 24,
+                spreadRadius: -6,
+                offset: Offset(0, _pressed ? 3 : 10),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(22),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(22),
+              onTap: widget.onTap,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 18, vertical: 18),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      KombuTheme.accent.withValues(alpha: 0.28),
+                      KombuTheme.accent2.withValues(alpha: 0.22),
+                      Colors.white.withValues(alpha: 0.04),
+                    ],
+                    stops: const [0.0, 0.55, 1.0],
+                  ),
+                  border: Border.all(
+                    color: KombuTheme.accent.withValues(alpha: 0.5),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            KombuTheme.accent,
+                            KombuTheme.accent.withValues(alpha: 0.65),
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color:
+                                KombuTheme.accent.withValues(alpha: 0.55),
+                            blurRadius: 18,
+                            spreadRadius: -2,
+                          ),
+                          BoxShadow(
+                            color: Colors.white.withValues(alpha: 0.15),
+                            blurRadius: 4,
+                            spreadRadius: -2,
+                            offset: const Offset(-2, -2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.menu_book,
+                        color: Color(0xFF04070A),
+                        size: 26,
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Recipes',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.3,
+                              color: KombuTheme.text,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black54,
+                                  offset: Offset(0, 1),
+                                  blurRadius: 4,
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Browse built-in kombucha + soda recipes, or add your own.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              height: 1.3,
+                              color: KombuTheme.text.withValues(alpha: 0.85),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white.withValues(alpha: 0.1),
+                      ),
+                      child: const Icon(Icons.restaurant_menu,
+                          color: KombuTheme.accent, size: 18),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
