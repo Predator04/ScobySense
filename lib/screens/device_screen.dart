@@ -10,17 +10,26 @@ import '../services/history_store.dart';
 import '../services/notification_service.dart';
 import '../services/prefs.dart';
 import '../services/subscription_client.dart';
+import '../services/update_service.dart';
+import '../services/update_state.dart';
 import '../theme.dart';
 import '../utils/time_format.dart';
 import 'batch_screen.dart';
 import 'recipes_screen.dart';
 import 'schedule_screen.dart';
 import '../widgets/glass_card.dart';
+import '../widgets/update_dialog.dart';
 
 class DeviceScreen extends StatefulWidget {
   final AuthService auth;
+  final UpdateService updater;
   final KombuDevice initial;
-  const DeviceScreen({super.key, required this.auth, required this.initial});
+  const DeviceScreen({
+    super.key,
+    required this.auth,
+    required this.updater,
+    required this.initial,
+  });
 
   @override
   State<DeviceScreen> createState() => _DeviceScreenState();
@@ -51,6 +60,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
   String? _localName;
   int _f1Days = AppPrefs.defaultF1Days;
   int _f2Days = AppPrefs.defaultF2Days;
+  bool _updateBannerDismissed = false;
 
   @override
   void initState() {
@@ -287,6 +297,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(16),
             children: [
+              _updateBanner(),
               _statusCard(),
               const SizedBox(height: 14),
               _recipesButton(),
@@ -317,6 +328,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                   padding: const EdgeInsets.only(top: 14),
                   child: InlineErrorCard(message: _err!, onRetry: _refresh),
                 ),
+              _versionFooter(),
             ],
           ),
         ),
@@ -738,6 +750,103 @@ class _DeviceScreenState extends State<DeviceScreen> {
         context,
         MaterialPageRoute(builder: (_) => const RecipesScreen()),
       ),
+    );
+  }
+
+  Widget _updateBanner() {
+    return ValueListenableBuilder<ReleaseInfo?>(
+      valueListenable: UpdateState.available,
+      builder: (context, release, _) {
+        if (release == null || _updateBannerDismissed) {
+          return const SizedBox.shrink();
+        }
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 14),
+          child: GlassCard(
+            padding: const EdgeInsets.fromLTRB(14, 10, 8, 10),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () {
+                final current = UpdateState.version.value;
+                showUpdateFlow(
+                  context,
+                  widget.updater,
+                  release,
+                  currentVersion: current.isEmpty
+                      ? release.tag
+                      : current,
+                );
+              },
+              child: Row(
+                children: [
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: KombuTheme.accent.withValues(alpha: 0.14),
+                      border: Border.all(
+                          color: KombuTheme.accent.withValues(alpha: 0.4)),
+                    ),
+                    child: const Icon(Icons.system_update_alt,
+                        color: KombuTheme.accent, size: 18),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Update available — v${release.version}',
+                          style: const TextStyle(
+                              color: KombuTheme.accent,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'tap to download',
+                          style: TextStyle(
+                              color: KombuTheme.textDim, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Dismiss',
+                    icon: const Icon(Icons.close,
+                        color: KombuTheme.textDim, size: 18),
+                    onPressed: () =>
+                        setState(() => _updateBannerDismissed = true),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _versionFooter() {
+    return ValueListenableBuilder<String>(
+      valueListenable: UpdateState.version,
+      builder: (context, version, _) {
+        if (version.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: 20, bottom: 4),
+          child: Center(
+            child: Text(
+              'v$version',
+              style: TextStyle(
+                fontSize: 11,
+                color: KombuTheme.textDim.withValues(alpha: 0.6),
+                letterSpacing: 0.3,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
