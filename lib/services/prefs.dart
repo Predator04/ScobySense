@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppPrefs {
   static const kUnit = 'temperature_unit';
   static const kNotifications = 'notifications_enabled';
+  static const kUse24Hour = 'use_24_hour_time';
   static const kScheduleF1Start = 'schedule_f1_start';
   static const kScheduleF1Stop = 'schedule_f1_stop';
   static const kScheduleF2Start = 'schedule_f2_start';
@@ -27,6 +28,16 @@ class AppPrefs {
   static Future<void> setNotifications(bool v) async {
     final p = await SharedPreferences.getInstance();
     await p.setBool(kNotifications, v);
+  }
+
+  static Future<bool> use24Hour() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getBool(kUse24Hour) ?? false;
+  }
+
+  static Future<void> setUse24Hour(bool v) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(kUse24Hour, v);
   }
 }
 

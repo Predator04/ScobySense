@@ -25,6 +25,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String _unit = 'F';
   bool _notif = true;
+  bool _use24Hour = false;
   PackageInfo? _info;
   bool _checking = false;
 
@@ -37,11 +38,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _load() async {
     final unit = await AppPrefs.unit();
     final notif = await AppPrefs.notifications();
+    final use24 = await AppPrefs.use24Hour();
     final info = await PackageInfo.fromPlatform();
     if (!mounted) return;
     setState(() {
       _unit = unit;
       _notif = notif;
+      _use24Hour = use24;
       _info = info;
     });
   }
@@ -56,6 +59,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     await AppPrefs.setNotifications(v);
     if (!mounted) return;
     setState(() => _notif = v);
+  }
+
+  Future<void> _setUse24Hour(bool v) async {
+    await AppPrefs.setUse24Hour(v);
+    if (!mounted) return;
+    setState(() => _use24Hour = v);
   }
 
   Future<void> _openRepo() async {
@@ -191,6 +200,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 8),
                   const Text(
                       'Device readings arrive in Fahrenheit (labelled "C" in firmware). Switching to Celsius converts for display only.',
+                      style: TextStyle(
+                          fontSize: 12, color: KombuTheme.textDim)),
+                  const SizedBox(height: 18),
+                  const Text('Time format',
+                      style: TextStyle(fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 10),
+                  SegmentedButton<bool>(
+                    segments: const [
+                      ButtonSegment(value: false, label: Text('12-hour')),
+                      ButtonSegment(value: true, label: Text('24-hour')),
+                    ],
+                    selected: {_use24Hour},
+                    onSelectionChanged: (s) => _setUse24Hour(s.first),
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                      'Applies to timers, batch history, and all other time displays.',
                       style: TextStyle(
                           fontSize: 12, color: KombuTheme.textDim)),
                 ],
