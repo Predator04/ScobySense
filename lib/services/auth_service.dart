@@ -1,0 +1,123 @@
+import 'package:amazon_cognito_identity_dart_2/cognito.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+class CognitoConfig {
+  static const region = 'us-east-1';
+  static const userPoolId = 'us-east-1_kgPju5Qgj';
+  static const clientId = '79579brug2p0sqmajgd4i44v9e';
+}
+
+class AuthTokens {
+  final String idToken;
+  final String accessToken;
+  final String refreshToken;
+  AuthTokens(this.idToken, this.accessToken, this.refreshToken);
+}
+
+class AuthService {
+  static const _storage = FlutterSecureStorage();
+  static const _kId = 'cognito_id';
+  static const _kAccess = 'cognito_access';
+  static const _kRefresh = 'cognito_refresh';
+  static const _kEmail = 'cognito_email';
+
+  final _pool = CognitoUserPool(CognitoConfig.userPoolId, CognitoConfig.clientId);
+
+  Future<AuthTokens> login(String email, String password) async {
+    final user = CognitoUser(email, _pool);
+    final details = AuthenticationDetails(username: email, password: password);
+    final session = await user.authenticateUser(details);
+    if (session == null) {
+      throw Exception('Authentication returned no session.');
+    }
+    final id = session.getIdToken().getJwtToken();
+    final access = session.getAccessToken().getJwtToken();
+    final refresh = session.getRefreshToken()?.getToken();
+    if (id == null || access == null || refresh == null) {
+      throw Exception('Cognito session missing a token.');
+    }
+    final tokens = AuthTokens(id, access, refresh);
+    await _save(email, tokens);
+    return tokens;
+  }
+
+  Future<AuthTokens?> currentTokens({bool refreshIfExpired = true}) async {
+    final id = await _storage.read(key: _kId);
+    final access = await _storage.read(key: _kAccess);
+    final refresh = await _storage.read(key: _kRefresh);
+    if (id == null || access == null || refresh == null) return null;
+    final tokens = AuthTokens(id, access, refresh);
+    if (!refreshIfExpired) return tokens;
+    if (_isExpiringSoon(id)) {
+      try {
+        return await refreshSession();
+      } catch (_) {
+        return null;
+      }
+    }
+    return tokens;
+  }
+
+  Future<AuthTokens> refreshSession() async {
+    final email = await _storage.read(key: _kEmail);
+    final refresh = await _storage.read(key: _kRefresh);
+    if (email == null || refresh == null) {
+      throw Exception('No refresh token stored.');
+    }
+    final user = CognitoUser(email, _pool);
+    final session = await user.refreshSession(CognitoRefreshToken(refresh));
+    if (session == null) throw Exception('Refresh returned no session.');
+    final id = session.getIdToken().getJwtToken()!;
+    final access = session.getAccessToken().getJwtToken()!;
+    final newRefresh = session.getRefreshToken()?.getToken() ?? refresh;
+    final tokens = AuthTokens(id, access, newRefresh);
+    await _save(email, tokens);
+    return tokens;
+  }
+
+  Future<void> logout() async {
+    await _storage.delete(key: _kId);
+    await _storage.delete(key: _kAccess);
+    await _storage.delete(key: _kRefresh);
+    await _storage.delete(key: _kEmail);
+  }
+
+  Future<void> _save(String email, AuthTokens t) async {
+    await _storage.write(key: _kEmail, value: email);
+    await _storage.write(key: _kId, value: t.idToken);
+    await _storage.write(key: _kAccess, value: t.accessToken);
+    await _storage.write(key: _kRefresh, value: t.refreshToken);
+  }
+
+  bool _isExpiringSoon(String jwt) {
+    try {
+      final parts = jwt.split('.');
+      if (parts.length < 2) return true;
+      final payload = _decodeB64Url(parts[1]);
+      final match = RegExp(r'"exp"\s*:\s*(\d+)').firstMatch(payload);
+      if (match == null) return true;
+      final exp = int.parse(match.group(1)!);
+      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+      return exp - now < 60;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  String _decodeB64Url(String s) {
+    var p = s.replaceAll('-', '+').replaceAll('_', '/');
+    switch (p.length % 4) {
+      case 2:
+        p += '==';
+        break;
+      case 3:
+        p += '=';
+        break;
+    }
+    return String.fromCharCodes(
+      Uri.parse('data:application/octet-stream;base64,$p')
+          .data!
+          .contentAsBytes(),
+    );
+  }
+}
