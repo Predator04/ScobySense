@@ -7,6 +7,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class RecipeStore {
   static const _kCustom = 'custom_recipes';
   static const _kRemoved = 'removed_recipes';
+  static const _kCategories = 'custom_categories';
+  static const _kRenames = 'category_renames';
 
   Future<List<Map<String, dynamic>>> loadBundled() async {
     final raw = await rootBundle.loadString('assets/recipes.json');
@@ -102,6 +104,110 @@ class RecipeStore {
       removed.add(slug);
       await p.setStringList(_kRemoved, removed.toList());
     }
+  }
+
+  /// User-added categories (persisted separately from recipes so an empty
+  /// category still shows up in the chip row).
+  Future<List<String>> loadCustomCategories() async {
+    final p = await SharedPreferences.getInstance();
+    final s = p.getString(_kCategories);
+    if (s == null || s.isEmpty) return const [];
+    try {
+      return (jsonDecode(s) as List).map((e) => e.toString()).toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  /// Rename map {originalTag -> displayedTag}. Applied at render + filter
+  /// time so bundled recipes also pick up renames without rewriting assets.
+  Future<Map<String, String>> loadRenames() async {
+    final p = await SharedPreferences.getInstance();
+    final s = p.getString(_kRenames);
+    if (s == null || s.isEmpty) return const {};
+    try {
+      final map = jsonDecode(s) as Map<String, dynamic>;
+      return map.map((k, v) => MapEntry(k, v.toString()));
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  /// Resolve a raw recipe tag through the rename map.
+  String effectiveTag(String tag, Map<String, String> renames) {
+    return renames[tag] ?? tag;
+  }
+
+  /// Full list of category labels the UI should show, with renames applied,
+  /// deduped and sorted.
+  Future<List<String>> listCategories() async {
+    final merged = await loadMerged();
+    final customCats = await loadCustomCategories();
+    final renames = await loadRenames();
+    final set = <String>{};
+    for (final r in merged) {
+      final t = r['tag']?.toString();
+      if (t != null && t.isNotEmpty) set.add(effectiveTag(t, renames));
+    }
+    for (final c in customCats) {
+      if (c.isNotEmpty) set.add(effectiveTag(c, renames));
+    }
+    final list = set.toList()..sort();
+    return list;
+  }
+
+  Future<void> addCategory(String name) async {
+    final trimmed = name.trim();
+    if (trimmed.isEmpty) return;
+    final p = await SharedPreferences.getInstance();
+    final current = await loadCustomCategories();
+    final renames = await loadRenames();
+    final existing = <String>{
+      for (final c in current) effectiveTag(c, renames),
+    };
+    for (final r in await loadMerged()) {
+      final t = r['tag']?.toString();
+      if (t != null && t.isNotEmpty) existing.add(effectiveTag(t, renames));
+    }
+    if (existing.contains(trimmed)) return;
+    final next = [...current, trimmed];
+    await p.setString(_kCategories, jsonEncode(next));
+  }
+
+  /// Rename a category label. Updates custom_categories, rewrites `tag` on
+  /// all matching custom recipes, and records the rename in the rename map
+  /// so bundled recipes with the old tag also pick up the new label.
+  Future<void> renameCategory(String from, String to) async {
+    final oldName = from.trim();
+    final newName = to.trim();
+    if (oldName.isEmpty || newName.isEmpty || oldName == newName) return;
+    final p = await SharedPreferences.getInstance();
+
+    // Rewrite custom recipe tags.
+    final custom = await loadCustom();
+    final rewritten = custom.map((e) {
+      final m = Map<String, dynamic>.from(e)..remove('custom');
+      if (m['tag']?.toString() == oldName) m['tag'] = newName;
+      return m;
+    }).toList();
+    await p.setString(_kCustom, jsonEncode(rewritten));
+
+    // Rewrite the custom_categories list.
+    final cats = await loadCustomCategories();
+    final nextCats = cats.map((c) => c == oldName ? newName : c).toList();
+    await p.setString(_kCategories, jsonEncode(nextCats));
+
+    // Update the rename map. Collapse chains: any existing X->oldName becomes X->newName.
+    final renames = Map<String, String>.from(await loadRenames());
+    for (final k in renames.keys.toList()) {
+      if (renames[k] == oldName) renames[k] = newName;
+    }
+    // Bundled recipes still carry the original tag; record oldName->newName so
+    // they display under the new label too.
+    renames[oldName] = newName;
+    // A self-mapping would be noise.
+    renames.removeWhere((k, v) => k == v);
+    await p.setString(_kRenames, jsonEncode(renames));
   }
 
   /// Generate a URL-safe slug from a title, appending a short timestamp
