@@ -203,15 +203,28 @@ class AppSyncClient {
 
   static const _pushCommand = r'''
     mutation Push($topic: String!, $payload: AWSJSON!) {
-      pushCommand(topic: $topic, payload: $payload)
+      pushCommand(topic: $topic, payload: $payload) {
+        success
+        topic
+        messageId
+        error
+      }
     }
   ''';
 
-  Future<String> pushCommand(String topic, Map<String, dynamic> payload) async {
+  Future<bool> pushCommand(String topic, Map<String, dynamic> payload) async {
     final data = await _post(_pushCommand, {
       'topic': topic,
       'payload': jsonEncode(payload),
     });
-    return (data['pushCommand'] ?? '').toString();
+    final result = (data['pushCommand'] as Map<String, dynamic>?) ?? const {};
+    final success = result['success'] == true;
+    if (!success) {
+      final err = (result['error'] as String?)?.trim();
+      throw ServerFailure(
+        err != null && err.isNotEmpty ? err : 'Command rejected by cloud.',
+      );
+    }
+    return true;
   }
 }

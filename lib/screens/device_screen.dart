@@ -207,34 +207,16 @@ class _DeviceScreenState extends State<DeviceScreen> {
     }
   }
 
-  Future<void> _run(String label, Future<String> Function() op) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: KombuTheme.bg2,
-        title: Text(label),
-        content: const Text(
-            'Control commands are still being verified and could disrupt an active ferment. Continue?'),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
-          ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Send')),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
+  Future<void> _run(String label, Future<bool> Function() op) async {
     setState(() {
       _busy = true;
       _ack = null;
       _err = null;
     });
     try {
-      final r = await op();
+      await op();
       if (!mounted) return;
-      setState(() => _ack = '$label: $r');
+      setState(() => _ack = '$label sent');
     } on KombuFailure catch (e) {
       if (!mounted) return;
       setState(() => _err = '$label: ${e.message}');
@@ -284,7 +266,10 @@ class _DeviceScreenState extends State<DeviceScreen> {
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => ScheduleScreen(deviceId: _device.deviceId),
+                builder: (_) => ScheduleScreen(
+                  auth: widget.auth,
+                  deviceId: _device.deviceId,
+                ),
               ),
             ),
           ),
@@ -477,31 +462,6 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 ],
               ),
               const SizedBox(height: 14),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: KombuTheme.accent2.withValues(alpha: 0.08),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: KombuTheme.accent2.withValues(alpha: 0.3)),
-                ),
-                child: const Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Icon(Icons.info_outline,
-                        size: 16, color: KombuTheme.accent2),
-                    SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Applies when control is confirmed. Nothing is sent to the device yet.',
-                        style: TextStyle(
-                            color: KombuTheme.accent2, fontSize: 12),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
@@ -516,9 +476,6 @@ class _DeviceScreenState extends State<DeviceScreen> {
                       onPressed: () async {
                         await AppPrefs.setBrewDays(
                             _device.deviceId, side, selected);
-                        // TODO(payload-wrapper): once PAYLOAD_WRAPPER_TODO in
-                        // command_service.dart is confirmed, dispatch here:
-                        //   await _cmd.setBrewTimer(_device.deviceId, side, selected);
                         if (!ctx.mounted) return;
                         Navigator.pop(ctx);
                         if (!mounted) return;
@@ -529,16 +486,40 @@ class _DeviceScreenState extends State<DeviceScreen> {
                             _f2Days = selected;
                           }
                         });
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '$side duration saved: ${selected}d '
-                              '(applies when control is confirmed)',
+                        final messenger = ScaffoldMessenger.of(context);
+                        try {
+                          await _cmd.setBrewTimer(
+                              _device.deviceId, side, selected);
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  '$side brew started: ${selected}d'),
                             ),
-                          ),
-                        );
+                          );
+                          setState(() => _ack = '$side brew $selected d sent');
+                        } on KombuFailure catch (e) {
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(
+                              backgroundColor: KombuTheme.danger,
+                              content:
+                                  Text('$side brew failed: ${e.message}'),
+                            ),
+                          );
+                          setState(() => _err = '$side brew: ${e.message}');
+                        } catch (e) {
+                          if (!mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(
+                              backgroundColor: KombuTheme.danger,
+                              content: Text('$side brew failed: $e'),
+                            ),
+                          );
+                          setState(() => _err = '$side brew: $e');
+                        }
                       },
-                      child: const Text('Save duration'),
+                      child: const Text('Start brew'),
                     ),
                   ),
                 ],
@@ -753,16 +734,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: const [
-            Text('Control',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            SizedBox(width: 8),
-            Icon(Icons.warning_amber, size: 16, color: KombuTheme.accent2),
-          ]),
-          const SizedBox(height: 4),
-          const Text(
-              'Controls are still being verified. Commands may be rejected or disrupt a ferment.',
-              style: TextStyle(fontSize: 12, color: KombuTheme.textDim)),
+          const Text('Control',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           _ExpandToggle(
             open: _controlOpen,
             onToggle: () => setState(() => _controlOpen = !_controlOpen),
@@ -780,22 +753,14 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 spacing: 10,
                 runSpacing: 10,
                 children: [
-                  _btn(
-                    _device.f1On ? 'Stop F1' : 'Start F1',
-                    () => _run(_device.f1On ? 'Stop F1' : 'Start F1',
-                        () => _cmd.setHeaterF1(_device.deviceId, !_device.f1On)),
-                  ),
-                  _btn(
-                    _device.f2On ? 'Stop F2' : 'Start F2',
-                    () => _run(_device.f2On ? 'Stop F2' : 'Start F2',
-                        () => _cmd.setHeaterF2(_device.deviceId, !_device.f2On)),
-                  ),
-                  _btn('F1 timer 3d',
-                      () => _run('F1 timer 3d',
-                          () => _cmd.setBrewTimer(_device.deviceId, 'F1', 3))),
-                  _btn('F2 timer 7d',
-                      () => _run('F2 timer 7d',
-                          () => _cmd.setBrewTimer(_device.deviceId, 'F2', 7))),
+                  _btn('Start F1 (${_f1Days}d)',
+                      () => _run('Start F1 ${_f1Days}d',
+                          () => _cmd.setBrewTimer(
+                              _device.deviceId, 'F1', _f1Days))),
+                  _btn('Start F2 (${_f2Days}d)',
+                      () => _run('Start F2 ${_f2Days}d',
+                          () => _cmd.setBrewTimer(
+                              _device.deviceId, 'F2', _f2Days))),
                   _btn('Sound on',
                       () => _run('Sound on',
                           () => _cmd.setSound(_device.deviceId, true))),
