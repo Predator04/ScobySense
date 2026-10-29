@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
 import 'screens/devices_screen.dart';
@@ -25,35 +26,57 @@ class KombuApp extends StatefulWidget {
   State<KombuApp> createState() => _KombuAppState();
 }
 
-class _KombuAppState extends State<KombuApp> {
+class _KombuAppState extends State<KombuApp> with WidgetsBindingObserver {
   final _auth = AuthService();
   final _updater = UpdateService();
-  bool _updateChecked = false;
+  Timer? _updateTimer;
+  bool _checking = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    WidgetsBinding.instance.addPostFrameCallback((_) => _silentUpdateCheck());
+    _updateTimer = Timer.periodic(
+      const Duration(minutes: 10),
+      (_) => _silentUpdateCheck(),
+    );
+  }
 
   @override
   void dispose() {
+    _updateTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _updater.dispose();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _silentUpdateCheck();
+    }
+  }
+
   Future<void> _silentUpdateCheck() async {
-    if (_updateChecked) return;
-    _updateChecked = true;
+    if (_checking) return;
+    _checking = true;
     try {
       final info = await _updater.packageInfo();
       UpdateState.version.value = info.version;
       final release = await _updater.checkForUpdate();
       UpdateState.available.value = release;
     } on KombuFailure {
-      // Silent on launch; Settings has an explicit button that surfaces errors.
+      // Silent; Settings has an explicit button that surfaces errors.
     } catch (_) {
       // Same.
+    } finally {
+      _checking = false;
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) => _silentUpdateCheck());
     return MaterialApp(
       title: 'ScobySense',
       debugShowCheckedModeBanner: false,
