@@ -1,6 +1,10 @@
+import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../services/appsync_client.dart';
+import '../services/errors.dart';
+import '../services/update_service.dart';
 import '../models/device.dart';
 import '../theme.dart';
 import '../widgets/glass_card.dart';
@@ -11,7 +15,8 @@ import 'login_screen.dart';
 
 class DevicesScreen extends StatefulWidget {
   final AuthService auth;
-  const DevicesScreen({super.key, required this.auth});
+  final UpdateService updater;
+  const DevicesScreen({super.key, required this.auth, required this.updater});
 
   @override
   State<DevicesScreen> createState() => _DevicesScreenState();
@@ -20,23 +25,62 @@ class DevicesScreen extends StatefulWidget {
 class _DevicesScreenState extends State<DevicesScreen> {
   late final AppSyncClient _client = AppSyncClient(widget.auth);
   Future<List<KombuDevice>>? _future;
+  bool _offline = false;
+  late final StreamSubscription<List<ConnectivityResult>> _connSub;
 
   @override
   void initState() {
     super.initState();
     _future = _client.listDevices();
+    _connSub =
+        Connectivity().onConnectivityChanged.listen(_handleConnectivity);
+    Connectivity().checkConnectivity().then(_handleConnectivity);
+  }
+
+  @override
+  void dispose() {
+    _connSub.cancel();
+    super.dispose();
+  }
+
+  void _handleConnectivity(List<ConnectivityResult> result) {
+    final offline = result.isEmpty ||
+        result.every((r) => r == ConnectivityResult.none);
+    if (offline != _offline && mounted) {
+      setState(() => _offline = offline);
+      if (!offline) _refresh();
+    }
   }
 
   Future<void> _refresh() async {
-    setState(() => _future = _client.listDevices());
-    await _future;
+    final f = _client.listDevices();
+    setState(() => _future = f);
+    try {
+      await f;
+    } on KombuFailure catch (e) {
+      _snack(e.message);
+    } catch (e) {
+      _snack(e.toString());
+    }
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg),
+        duration: const Duration(seconds: 4),
+        action: SnackBarAction(label: 'Retry', onPressed: _refresh),
+      ),
+    );
   }
 
   Future<void> _logout() async {
     await widget.auth.logout();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(MaterialPageRoute(
-      builder: (_) => LoginScreen(auth: widget.auth),
+      builder: (_) =>
+          LoginScreen(auth: widget.auth, updater: widget.updater),
     ));
   }
 
@@ -54,7 +98,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                     const Expanded(
                       child: Text('Devices',
                           style: TextStyle(
-                              fontSize: 24, fontWeight: FontWeight.w700)),
+                              fontSize: 26, fontWeight: FontWeight.w700)),
                     ),
                     IconButton(
                       icon: const Icon(Icons.menu_book_outlined),
@@ -70,13 +114,18 @@ class _DevicesScreenState extends State<DevicesScreen> {
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) =>
-                                SettingsScreen(onLogout: _logout)),
+                            builder: (_) => SettingsScreen(
+                                  onLogout: _logout,
+                                  updater: widget.updater,
+                                )),
                       ),
                     ),
                   ],
                 ),
               ),
+              if (_offline)
+                const OfflineBanner(
+                    message: 'Offline — showing last known state.'),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _refresh,
@@ -90,28 +139,15 @@ class _DevicesScreenState extends State<DevicesScreen> {
                                 color: KombuTheme.accent));
                       }
                       if (snap.hasError) {
+                        final err = snap.error;
+                        final msg = err is KombuFailure
+                            ? err.message
+                            : err.toString();
                         return ListView(
                           padding: const EdgeInsets.all(20),
                           children: [
-                            GlassCard(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('Could not load devices',
-                                      style: TextStyle(
-                                          color: KombuTheme.danger,
-                                          fontWeight: FontWeight.w600)),
-                                  const SizedBox(height: 8),
-                                  Text(snap.error.toString(),
-                                      style: const TextStyle(
-                                          color: KombuTheme.textDim)),
-                                  const SizedBox(height: 12),
-                                  ElevatedButton(
-                                      onPressed: _refresh,
-                                      child: const Text('Retry')),
-                                ],
-                              ),
-                            ),
+                            InlineErrorCard(
+                                message: msg, onRetry: _refresh),
                           ],
                         );
                       }
@@ -123,8 +159,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                             GlassCard(
                               child: Text(
                                   'No devices on this account. Pair a Fermenstation in the official Kombu app first.',
-                                  style:
-                                      TextStyle(color: KombuTheme.textDim)),
+                                  style: TextStyle(color: KombuTheme.textDim)),
                             )
                           ],
                         );
@@ -133,7 +168,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
                         padding: const EdgeInsets.all(20),
                         itemCount: devices.length,
                         separatorBuilder: (_, __) =>
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 14),
                         itemBuilder: (_, i) => _DeviceTile(
                           device: devices[i],
                           onTap: () => Navigator.push(
@@ -169,29 +204,55 @@ class _DeviceTile extends StatelessWidget {
     final online = (device.status ?? '').toLowerCase() == 'online';
     return GlassCard(
       onTap: onTap,
+      padding: const EdgeInsets.all(18),
       child: Row(
         children: [
           Container(
-            width: 10,
-            height: 10,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: online ? KombuTheme.accent : KombuTheme.textDim,
               shape: BoxShape.circle,
+              gradient: LinearGradient(
+                colors: online
+                    ? const [KombuTheme.accent, Color(0xFF2DD4BF)]
+                    : [
+                        KombuTheme.textDim.withValues(alpha: 0.4),
+                        KombuTheme.textDim.withValues(alpha: 0.2)
+                      ],
+              ),
+              boxShadow: online
+                  ? [
+                      BoxShadow(
+                        color: KombuTheme.accent.withValues(alpha: 0.4),
+                        blurRadius: 14,
+                        spreadRadius: -2,
+                      )
+                    ]
+                  : null,
+            ),
+            child: Icon(
+              online ? Icons.local_fire_department : Icons.power_settings_new,
+              color: online
+                  ? const Color(0xFF04070A)
+                  : KombuTheme.textDim,
+              size: 22,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(device.deviceName ?? device.deviceId,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w600)),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(device.deviceId,
                     style: const TextStyle(
-                        fontSize: 12, color: KombuTheme.textDim)),
-                const SizedBox(height: 8),
+                        fontSize: 11, color: KombuTheme.textDim)),
+                const SizedBox(height: 10),
                 Row(
                   children: [
                     _Chip(
@@ -201,6 +262,8 @@ class _DeviceTile extends StatelessWidget {
                     _Chip(
                         label: 'F2 ${device.f2On ? "ON" : "OFF"}',
                         on: device.f2On),
+                    const SizedBox(width: 8),
+                    _Chip(label: online ? 'online' : 'offline', on: online),
                   ],
                 ),
               ],

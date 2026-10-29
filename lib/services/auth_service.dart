@@ -1,5 +1,6 @@
 import 'package:amazon_cognito_identity_dart_2/cognito.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'errors.dart';
 
 class CognitoConfig {
   static const region = 'us-east-1';
@@ -21,24 +22,60 @@ class AuthService {
   static const _kRefresh = 'cognito_refresh';
   static const _kEmail = 'cognito_email';
 
-  final _pool = CognitoUserPool(CognitoConfig.userPoolId, CognitoConfig.clientId);
+  final _pool =
+      CognitoUserPool(CognitoConfig.userPoolId, CognitoConfig.clientId);
 
   Future<AuthTokens> login(String email, String password) async {
-    final user = CognitoUser(email, _pool);
-    final details = AuthenticationDetails(username: email, password: password);
-    final session = await user.authenticateUser(details);
-    if (session == null) {
-      throw Exception('Authentication returned no session.');
+    try {
+      final user = CognitoUser(email, _pool);
+      final details =
+          AuthenticationDetails(username: email, password: password);
+      final session = await user.authenticateUser(details);
+      if (session == null) {
+        throw const AuthFailure('Authentication returned no session.');
+      }
+      final id = session.getIdToken().getJwtToken();
+      final access = session.getAccessToken().getJwtToken();
+      final refresh = session.getRefreshToken()?.getToken();
+      if (id == null || access == null || refresh == null) {
+        throw const AuthFailure('Cognito session missing a token.');
+      }
+      final tokens = AuthTokens(id, access, refresh);
+      await _save(email, tokens);
+      return tokens;
+    } on KombuFailure {
+      rethrow;
+    } on CognitoClientException catch (e) {
+      final msg = e.message ?? e.code ?? 'Sign-in failed.';
+      throw AuthFailure(_prettyCognito(e.code, msg), e);
+    } catch (e) {
+      final text = e.toString().toLowerCase();
+      if (text.contains('socketexception') ||
+          text.contains('failed host lookup') ||
+          text.contains('network is unreachable') ||
+          text.contains('clientexception')) {
+        throw NetworkFailure('Can\'t reach the sign-in server.', e);
+      }
+      throw AuthFailure(e.toString(), e);
     }
-    final id = session.getIdToken().getJwtToken();
-    final access = session.getAccessToken().getJwtToken();
-    final refresh = session.getRefreshToken()?.getToken();
-    if (id == null || access == null || refresh == null) {
-      throw Exception('Cognito session missing a token.');
+  }
+
+  String _prettyCognito(String? code, String fallback) {
+    switch (code) {
+      case 'NotAuthorizedException':
+        return 'Email or password is incorrect.';
+      case 'UserNotFoundException':
+        return 'No account found for that email.';
+      case 'UserNotConfirmedException':
+        return 'Account not confirmed. Check email for a verification link.';
+      case 'PasswordResetRequiredException':
+        return 'Password reset required. Reset in the official app first.';
+      case 'TooManyRequestsException':
+      case 'LimitExceededException':
+        return 'Too many attempts. Try again in a minute.';
+      default:
+        return fallback;
     }
-    final tokens = AuthTokens(id, access, refresh);
-    await _save(email, tokens);
-    return tokens;
   }
 
   Future<AuthTokens?> currentTokens({bool refreshIfExpired = true}) async {
@@ -51,7 +88,7 @@ class AuthService {
     if (_isExpiringSoon(id)) {
       try {
         return await refreshSession();
-      } catch (_) {
+      } on AuthFailure {
         return null;
       }
     }
@@ -62,17 +99,28 @@ class AuthService {
     final email = await _storage.read(key: _kEmail);
     final refresh = await _storage.read(key: _kRefresh);
     if (email == null || refresh == null) {
-      throw Exception('No refresh token stored.');
+      throw const AuthFailure('Session expired. Please sign in again.');
     }
-    final user = CognitoUser(email, _pool);
-    final session = await user.refreshSession(CognitoRefreshToken(refresh));
-    if (session == null) throw Exception('Refresh returned no session.');
-    final id = session.getIdToken().getJwtToken()!;
-    final access = session.getAccessToken().getJwtToken()!;
-    final newRefresh = session.getRefreshToken()?.getToken() ?? refresh;
-    final tokens = AuthTokens(id, access, newRefresh);
-    await _save(email, tokens);
-    return tokens;
+    try {
+      final user = CognitoUser(email, _pool);
+      final session = await user.refreshSession(CognitoRefreshToken(refresh));
+      if (session == null) {
+        throw const AuthFailure('Refresh returned no session.');
+      }
+      final id = session.getIdToken().getJwtToken()!;
+      final access = session.getAccessToken().getJwtToken()!;
+      final newRefresh = session.getRefreshToken()?.getToken() ?? refresh;
+      final tokens = AuthTokens(id, access, newRefresh);
+      await _save(email, tokens);
+      return tokens;
+    } on KombuFailure {
+      rethrow;
+    } on CognitoClientException catch (e) {
+      throw AuthFailure(_prettyCognito(e.code, e.message ?? 'Refresh failed.'),
+          e);
+    } catch (e) {
+      throw AuthFailure('Could not refresh session.', e);
+    }
   }
 
   Future<void> logout() async {
