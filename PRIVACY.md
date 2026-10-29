@@ -1,6 +1,6 @@
 # ScobySense Privacy Policy
 
-_Last updated: 2026-10-28_
+_Last updated: 2026-10-29_
 
 ScobySense is a community-built Android companion for The Fermenstation
 (KOMBU) kombucha brewer. It is published by the ScobySense project at
@@ -61,11 +61,10 @@ push system used by the official Kombu app (Firebase Cloud Messaging) is
 
 ## Device control
 
-ScobySense's write-control path (toggling heaters, sending brew timers)
-is **gated** behind an explicit "Show controls" expander and a
-confirmation dialog. The command payload wrapper has not yet been
-confirmed against the real device — see `command_service.dart`
-(`PAYLOAD_WRAPPER_TODO`). We do not auto-send any device command.
+ScobySense can send commands to your device (brew timers, sound toggle,
+turning a fermenter off) when you tap a control in the app. Commands are
+only ever sent on an explicit action from you — the app never sends
+anything automatically.
 
 ## Contact
 
