@@ -166,7 +166,8 @@ class _RecipeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasFullGuide = data['steps'] is List;
+    final hasFullGuide =
+        data['steps'] is List || data['ingredients'] is List;
     return GlassCard(
       onTap: () {
         if (hasFullGuide) {
@@ -253,7 +254,6 @@ class _RecipeDetail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final steps = (data['steps'] as List?)?.cast<String>() ?? const [];
     final soda = data['soda'] as Map<String, dynamic>?;
     return Scaffold(
       appBar: AppBar(title: Text(data['title']?.toString() ?? 'Recipe')),
@@ -261,129 +261,148 @@ class _RecipeDetail extends StatelessWidget {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            GlassCard(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (data['summary'] != null) ...[
-                    Text(data['summary'] as String,
-                        style: const TextStyle(color: AppTheme.textDim)),
-                    const SizedBox(height: 12),
-                  ],
-                  if (data['ferment_temp_c'] != null)
-                    Row(
-                      children: [
-                        const Icon(Icons.thermostat,
-                            size: 16, color: AppTheme.accent),
-                        const SizedBox(width: 6),
-                        Text('Ferment ${data['ferment_temp_c']}°C',
-                            style:
-                                const TextStyle(color: AppTheme.accent)),
-                      ],
-                    ),
-                  const SizedBox(height: 12),
-                  const Text('Steps',
-                      style: TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 8),
-                  for (int i = 0; i < steps.length; i++) ...[
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('${i + 1}.',
-                            style: const TextStyle(
-                                color: AppTheme.accent,
-                                fontWeight: FontWeight.w600)),
-                        const SizedBox(width: 8),
-                        Expanded(child: Text(steps[i])),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-                  if (data['warning_signs'] != null) ...[
-                    const SizedBox(height: 4),
-                    const Text('Warnings',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 4),
-                    Text(data['warning_signs'] as String,
-                        style:
-                            const TextStyle(color: AppTheme.accent2)),
-                  ],
-                  if (data['url'] != null) ...[
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: () => _openUrl(data['url'] as String?),
-                      icon: const Icon(Icons.open_in_new),
-                      label: const Text('Source'),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+            _RecipeBlock(data: data),
             if (soda != null) ...[
               const SizedBox(height: 12),
-              GlassCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(soda['title']?.toString() ?? 'Soda',
-                        style: const TextStyle(
-                            fontSize: 16, fontWeight: FontWeight.w700)),
-                    if (soda['makes'] != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(soda['makes'] as String,
-                            style: const TextStyle(
-                                color: AppTheme.textDim)),
-                      ),
-                    const SizedBox(height: 12),
-                    const Text('Ingredients',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 4),
-                    for (final e
-                        in (soda['ingredients'] as Map<String, dynamic>? ?? {})
-                            .entries)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 2),
-                        child: Row(
-                          children: [
-                            Text(e.key.replaceAll('_', ' '),
-                                style: const TextStyle(
-                                    color: AppTheme.textDim)),
-                            const Spacer(),
-                            Text(e.value.toString()),
-                          ],
-                        ),
-                      ),
-                    const SizedBox(height: 12),
-                    const Text('Steps',
-                        style: TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 4),
-                    for (int i = 0;
-                        i < ((soda['steps'] as List?)?.length ?? 0);
-                        i++) ...[
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('${i + 1}.',
-                              style: const TextStyle(
-                                  color: AppTheme.accent,
-                                  fontWeight: FontWeight.w600)),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                                (soda['steps'] as List)[i].toString()),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                    ],
-                  ],
-                ),
-              ),
+              _RecipeBlock(data: soda, isSub: true),
             ],
           ],
         ),
       ),
     );
+  }
+}
+
+class _RecipeBlock extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final bool isSub;
+  const _RecipeBlock({required this.data, this.isSub = false});
+
+  @override
+  Widget build(BuildContext context) {
+    final steps = (data['steps'] as List?)?.cast<String>() ?? const [];
+    final ingredients =
+        (data['ingredients'] as List?)?.cast<Map<String, dynamic>>() ??
+            const <Map<String, dynamic>>[];
+    final subtitle = _subtitle();
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isSub) ...[
+            Text(data['title']?.toString() ?? 'Recipe',
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+          ],
+          if (data['summary'] != null) ...[
+            Text(data['summary'] as String,
+                style: const TextStyle(color: AppTheme.textDim)),
+            const SizedBox(height: 8),
+          ],
+          if (subtitle != null) ...[
+            Text(subtitle,
+                style: const TextStyle(
+                    color: AppTheme.textDim,
+                    fontStyle: FontStyle.italic,
+                    fontSize: 13)),
+            const SizedBox(height: 8),
+          ],
+          if (data['ferment_temp'] != null) ...[
+            Row(
+              children: [
+                const Icon(Icons.thermostat,
+                    size: 16, color: AppTheme.accent),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text('Ferment ${data['ferment_temp']}',
+                      style: const TextStyle(color: AppTheme.accent)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+          ],
+          if (ingredients.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            const Text('Ingredients',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 6),
+            for (final it in ingredients)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 5,
+                      child: Text(it['name']?.toString() ?? '',
+                          style: const TextStyle(color: AppTheme.text)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 4,
+                      child: Text(it['amount']?.toString() ?? '',
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                              color: AppTheme.textDim)),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+          if (steps.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            const Text('Steps',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 8),
+            for (int i = 0; i < steps.length; i++) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('${i + 1}.',
+                      style: const TextStyle(
+                          color: AppTheme.accent,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(width: 8),
+                  Expanded(child: Text(steps[i])),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+          ],
+          if (data['prep_tips'] != null) ...[
+            const SizedBox(height: 4),
+            const Text('Tips',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(data['prep_tips'] as String,
+                style: const TextStyle(color: AppTheme.textDim)),
+          ],
+          if (data['warning_signs'] != null) ...[
+            const SizedBox(height: 12),
+            const Text('Warnings',
+                style: TextStyle(fontWeight: FontWeight.w700)),
+            const SizedBox(height: 4),
+            Text(data['warning_signs'] as String,
+                style: const TextStyle(color: AppTheme.accent2)),
+          ],
+          if (!isSub && data['url'] != null) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () => _openUrl(data['url'] as String?),
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Source'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String? _subtitle() {
+    final makes = data['makes']?.toString();
+    if (makes != null && makes.isNotEmpty) return 'Makes: $makes';
+    if (data['per_bottle'] == true) return 'Per 1 bottle (F2 flavoring)';
+    return null;
   }
 }
