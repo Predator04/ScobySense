@@ -102,7 +102,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     style: TextStyle(
                                         fontSize: 24,
                                         fontWeight: FontWeight.w700)),
-                                Text('Fermenstation client',
+                                Text('Kombucha brewer companion',
                                     style: TextStyle(
                                         color: AppTheme.textDim,
                                         fontSize: 13)),
