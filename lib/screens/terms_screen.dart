@@ -19,15 +19,37 @@ class TermsScreen extends StatelessWidget {
       Icons.flag_outlined,
       'Unofficial third-party app',
       'ScobySense is a community-built client. It is NOT affiliated with, '
-          'endorsed by, or supported by Kombu / The Fermenstation. Please do '
-          'not contact them for help with it.',
+          'endorsed by, or supported by Kombu / The Fermenstation. All product '
+          'names, logos, and trademarks belong to their respective owners. '
+          'Please do not contact them for help with it.',
+    ),
+    _Point(
+      Icons.shield_outlined,
+      'Provided "AS IS" — no warranty',
+      'The app is provided "AS IS", with NO warranty of any kind — express '
+          'or implied — including no warranty of merchantability, fitness for '
+          'a particular purpose, non-infringement, or that it will work at '
+          'all.',
     ),
     _Point(
       Icons.gavel_outlined,
       'No liability — use entirely at your own risk',
-      'The app and its creator(s) accept NO responsibility or liability for '
-          'anything that happens to your device, your batches, or you. '
-          'You use ScobySense entirely at your own risk.',
+      'To the fullest extent permitted by law, the app and its creator(s) '
+          'accept NO responsibility or liability for any damage to your '
+          'device, spoiled or ruined batches, property damage, personal '
+          'injury, lost data, or any other loss — including direct, indirect, '
+          'incidental, consequential, special, exemplary, or punitive '
+          'damages — arising from your use of the app. You use ScobySense '
+          'entirely at your own risk.',
+    ),
+    _Point(
+      Icons.handshake_outlined,
+      'You agree to indemnify the creator(s)',
+      'You agree to indemnify, defend, and hold harmless the app\'s '
+          'creator(s) and contributors from any and all claims, damages, '
+          'losses, liabilities, costs, and expenses (including reasonable '
+          'legal fees) arising out of or related to your use of the app, '
+          'your batches, or your violation of these terms.',
     ),
     _Point(
       Icons.account_circle_outlined,
@@ -50,6 +72,14 @@ class TermsScreen extends StatelessWidget {
           'unsafe.',
     ),
     _Point(
+      Icons.medical_services_outlined,
+      'No health claims — not medical advice',
+      'The app is not medical advice and makes NO claims to diagnose, treat, '
+          'cure, or prevent any disease or condition. Statements about '
+          'kombucha or fermentation have not been evaluated by any health '
+          'authority. Consult a qualified professional for medical questions.',
+    ),
+    _Point(
       Icons.local_fire_department,
       'The machine heats during brewing',
       'Do not tamper with or bypass the machine\'s built-in safety features.',
@@ -61,10 +91,34 @@ class TermsScreen extends StatelessWidget {
           'does not either). It monitors temperature only.',
     ),
     _Point(
+      Icons.vpn_key_outlined,
+      'Your account is your responsibility',
+      'You are responsible for your own Kombu account credentials, for '
+          'keeping them secure, and for all activity under your account. You '
+          'must also comply with Kombu / The Fermenstation\'s own terms of '
+          'service.',
+    ),
+    _Point(
       Icons.cloud_queue,
       'Dependent on Kombu\'s backend',
-      'ScobySense talks to Kombu\'s backend. If Kombu changes or revokes it, '
-          'the app may stop working.',
+      'ScobySense talks to Kombu\'s backend. If Kombu changes, throttles, or '
+          'revokes access, the app may stop working at any time without '
+          'notice, and the creator(s) have no obligation to restore service.',
+    ),
+    _Point(
+      Icons.verified_user_outlined,
+      'Personal, non-commercial use — 18+',
+      'ScobySense is for personal, non-commercial use only. You must be at '
+          'least 18 years of age, or the age of majority in your '
+          'jurisdiction, to use the app.',
+    ),
+    _Point(
+      Icons.balance,
+      'Governing law — Nevada, USA',
+      'These terms are governed by the laws of the State of Nevada, USA, '
+          'without regard to its conflict-of-laws rules. Exclusive venue for '
+          'any dispute lies in the state or federal courts located in Clark '
+          'County, Nevada.',
     ),
   ];
 
