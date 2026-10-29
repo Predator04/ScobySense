@@ -28,8 +28,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   TimeOfDay? _f1Stop;
   TimeOfDay? _f2Start;
   TimeOfDay? _f2Stop;
-  int _f1Days = AppPrefs.defaultF1Days;
-  int _f2Days = AppPrefs.defaultF2Days;
+  int _f1Seconds = AppPrefs.defaultBrewSeconds('F1');
+  int _f2Seconds = AppPrefs.defaultBrewSeconds('F2');
   bool _loaded = false;
   bool _busy = false;
 
@@ -57,8 +57,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       return TimeOfDay(hour: h, minute: m);
     }
 
-    final f1Days = await AppPrefs.brewDays(widget.deviceId, 'F1');
-    final f2Days = await AppPrefs.brewDays(widget.deviceId, 'F2');
+    final f1Seconds = await AppPrefs.brewSeconds(widget.deviceId, 'F1');
+    final f2Seconds = await AppPrefs.brewSeconds(widget.deviceId, 'F2');
 
     if (!mounted) return;
     setState(() {
@@ -66,10 +66,23 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       _f1Stop = read(_kF1Stop);
       _f2Start = read(_kF2Start);
       _f2Stop = read(_kF2Stop);
-      _f1Days = f1Days;
-      _f2Days = f2Days;
+      _f1Seconds = f1Seconds;
+      _f2Seconds = f2Seconds;
       _loaded = true;
     });
+  }
+
+  static String _humanize(int totalSeconds) {
+    if (totalSeconds <= 0) return '0m';
+    final d = totalSeconds ~/ 86400;
+    final h = (totalSeconds % 86400) ~/ 3600;
+    final m = (totalSeconds % 3600) ~/ 60;
+    final parts = <String>[];
+    if (d > 0) parts.add('${d}d');
+    if (h > 0) parts.add('${h}h');
+    if (m > 0) parts.add('${m}m');
+    if (parts.isEmpty) parts.add('<1m');
+    return parts.join(' ');
   }
 
   Future<void> _save(String key, TimeOfDay? v) async {
@@ -149,14 +162,14 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   }
 
   Future<void> _startBrew(String side) async {
-    final days = side == 'F1' ? _f1Days : _f2Days;
+    final seconds = side == 'F1' ? _f1Seconds : _f2Seconds;
     final messenger = ScaffoldMessenger.of(context);
     setState(() => _busy = true);
     try {
-      await _cmd.setBrewTimer(widget.deviceId, side, days);
+      await _cmd.setBrewTimerSeconds(widget.deviceId, side, seconds);
       if (!mounted) return;
       messenger.showSnackBar(
-        SnackBar(content: Text('$side brew started: ${days}d')),
+        SnackBar(content: Text('$side brew started: ${_humanize(seconds)}')),
       );
     } on KombuFailure catch (e) {
       if (!mounted) return;
@@ -206,9 +219,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  _brewCard('F1', _f1Days),
+                  _brewCard('F1', _f1Seconds),
                   const SizedBox(height: 14),
-                  _brewCard('F2', _f2Days),
+                  _brewCard('F2', _f2Seconds),
                   const SizedBox(height: 20),
                   GlassCard(
                     child: Column(
@@ -235,7 +248,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     );
   }
 
-  Widget _brewCard(String side, int days) {
+  Widget _brewCard(String side, int seconds) {
+    final human = _humanize(seconds);
+    final enabled = !_busy && seconds > 0;
     return GlassCard(
       child: Row(
         children: [
@@ -247,16 +262,16 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                     style: const TextStyle(
                         fontSize: 16, fontWeight: FontWeight.w700)),
                 const SizedBox(height: 2),
-                Text('Saved duration: ${days}d',
+                Text('Saved duration: $human',
                     style: const TextStyle(
                         fontSize: 12, color: KombuTheme.textDim)),
               ],
             ),
           ),
           ElevatedButton.icon(
-            onPressed: _busy ? null : () => _startBrew(side),
+            onPressed: enabled ? () => _startBrew(side) : null,
             icon: const Icon(Icons.play_arrow, size: 18),
-            label: Text('Start ${days}d'),
+            label: Text('Start $human'),
           ),
         ],
       ),

@@ -57,18 +57,41 @@ class AppPrefs {
   static String _brewKey(String deviceId, String side) =>
       'brew:$deviceId:${side.toLowerCase()}days';
 
+  static String _brewSecondsKey(String deviceId, String side) =>
+      'brew:$deviceId:${side.toLowerCase()}seconds';
+
   static int defaultBrewDays(String side) =>
       side.toUpperCase() == 'F1' ? defaultF1Days : defaultF2Days;
 
+  static int defaultBrewSeconds(String side) =>
+      defaultBrewDays(side) * 86400;
+
   static Future<int> brewDays(String deviceId, String side) async {
-    final p = await SharedPreferences.getInstance();
-    return p.getInt(_brewKey(deviceId, side)) ?? defaultBrewDays(side);
+    final s = await brewSeconds(deviceId, side);
+    return s ~/ 86400;
   }
 
   static Future<void> setBrewDays(
       String deviceId, String side, int days) async {
+    await setBrewSeconds(deviceId, side, days * 86400);
+  }
+
+  /// Reads total brew duration in seconds. Falls back to the legacy day-only
+  /// key (pre-v0.5.8) so existing user settings survive the upgrade.
+  static Future<int> brewSeconds(String deviceId, String side) async {
     final p = await SharedPreferences.getInstance();
-    await p.setInt(_brewKey(deviceId, side), days);
+    final s = p.getInt(_brewSecondsKey(deviceId, side));
+    if (s != null) return s;
+    final legacyDays = p.getInt(_brewKey(deviceId, side));
+    if (legacyDays != null) return legacyDays * 86400;
+    return defaultBrewSeconds(side);
+  }
+
+  static Future<void> setBrewSeconds(
+      String deviceId, String side, int totalSeconds) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setInt(_brewSecondsKey(deviceId, side), totalSeconds);
+    await p.remove(_brewKey(deviceId, side));
   }
 
   static String _nameKey(String deviceId) => 'device:$deviceId:name';
