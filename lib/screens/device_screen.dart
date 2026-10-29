@@ -6,8 +6,14 @@ import '../models/device.dart';
 import '../services/appsync_client.dart';
 import '../services/auth_service.dart';
 import '../services/command_service.dart';
+import '../services/errors.dart';
 import '../services/history_store.dart';
+import '../services/notification_service.dart';
+import '../services/prefs.dart';
+import '../services/subscription_client.dart';
 import '../theme.dart';
+import 'batch_screen.dart';
+import 'schedule_screen.dart';
 import '../widgets/glass_card.dart';
 
 class DeviceScreen extends StatefulWidget {
@@ -22,25 +28,103 @@ class DeviceScreen extends StatefulWidget {
 class _DeviceScreenState extends State<DeviceScreen> {
   late final AppSyncClient _client = AppSyncClient(widget.auth);
   late final CommandService _cmd = CommandService(_client);
+  late final DeviceSubscriptionClient _sub =
+      DeviceSubscriptionClient(widget.auth);
+  StreamSubscription<BrewerDevice>? _subListen;
   final _history = HistoryStore();
   late BrewerDevice _device = widget.initial;
   Timer? _poll;
+  bool _liveConnected = false;
+  List<Map<String, dynamic>> _alertRules = const [];
+  DateTime? _lastF1Expected;
+  DateTime? _lastF2Expected;
   bool _busy = false;
   String? _ack;
   String? _err;
   List<TempSample> _samples = const [];
+  bool _detailsOpen = false;
+  bool _controlOpen = false;
+  String _unit = 'F';
 
   @override
   void initState() {
     super.initState();
+    _loadUnit();
     _loadHistory();
+    _loadAlertRules();
     _refresh();
     _poll = Timer.periodic(const Duration(seconds: 60), (_) => _refresh());
+    _startLive();
+  }
+
+  Future<void> _startLive() async {
+    _subListen = _sub.updates.listen(_onLiveUpdate);
+    await _sub.start();
+    if (mounted) setState(() => _liveConnected = true);
+  }
+
+  void _onLiveUpdate(BrewerDevice d) {
+    if (d.deviceId != _device.deviceId) return;
+    final sample = TempSample(
+      ts: DateTime.now().millisecondsSinceEpoch ~/ 1000,
+      f1Temp: d.f1Temp,
+      f2Temp: d.f2Temp,
+      f1Status: d.f1Status,
+      f2Status: d.f2Status,
+    );
+    _history.append(d.deviceId, sample);
+    _checkNotifications(d);
+    if (!mounted) return;
+    setState(() {
+      _device = d;
+      _liveConnected = true;
+      _err = null;
+    });
+  }
+
+  void _checkNotifications(BrewerDevice d) {
+    NotificationService.instance.evaluate(d, rules: _alertRules);
+    DateTime? parse(String? iso) =>
+        (iso == null || iso.isEmpty) ? null : DateTime.tryParse(iso);
+    final f1New = parse(d.f1RemainingTime);
+    final f2New = parse(d.f2RemainingTime);
+    final now = DateTime.now();
+
+    if (f1New != null && _lastF1Expected != null) {
+      final wasFuture = _lastF1Expected!.isAfter(now.subtract(
+          const Duration(minutes: 2)));
+      if (!f1New.isAfter(now) && wasFuture) {
+        NotificationService.instance.brewTimerDone(d, 'F1');
+      }
+    }
+    if (f2New != null && _lastF2Expected != null) {
+      final wasFuture = _lastF2Expected!.isAfter(now.subtract(
+          const Duration(minutes: 2)));
+      if (!f2New.isAfter(now) && wasFuture) {
+        NotificationService.instance.brewTimerDone(d, 'F2');
+      }
+    }
+    _lastF1Expected = f1New;
+    _lastF2Expected = f2New;
+  }
+
+  Future<void> _loadUnit() async {
+    final u = await AppPrefs.unit();
+    if (mounted) setState(() => _unit = u);
+  }
+
+  Future<void> _loadAlertRules() async {
+    try {
+      final rules = await _client.listAlertRules();
+      if (mounted) setState(() => _alertRules = rules);
+    } catch (_) {}
   }
 
   @override
   void dispose() {
     _poll?.cancel();
+    _subListen?.cancel();
+    _sub.stop();
     super.dispose();
   }
 
@@ -65,12 +149,16 @@ class _DeviceScreenState extends State<DeviceScreen> {
       );
       await _history.append(match.deviceId, sample);
       final hist = await _history.load(match.deviceId);
+      _checkNotifications(match);
       if (!mounted) return;
       setState(() {
         _device = match;
         _samples = hist;
         _err = null;
       });
+    } on AppFailure catch (e) {
+      if (!mounted) return;
+      setState(() => _err = e.message);
     } catch (e) {
       if (!mounted) return;
       setState(() => _err = e.toString());
@@ -103,8 +191,13 @@ class _DeviceScreenState extends State<DeviceScreen> {
     });
     try {
       final r = await op();
+      if (!mounted) return;
       setState(() => _ack = '$label: $r');
+    } on AppFailure catch (e) {
+      if (!mounted) return;
+      setState(() => _err = '$label: ${e.message}');
     } catch (e) {
+      if (!mounted) return;
       setState(() => _err = '$label: $e');
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -118,6 +211,30 @@ class _DeviceScreenState extends State<DeviceScreen> {
         title: Text(_device.deviceName ?? _device.deviceId),
         actions: [
           IconButton(
+            tooltip: 'Batches',
+            icon: const Icon(Icons.science_outlined),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BatchScreen(
+                  auth: widget.auth,
+                  deviceId: _device.deviceId,
+                  deviceName: _device.deviceName,
+                ),
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Schedule',
+            icon: const Icon(Icons.schedule),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ScheduleScreen(deviceId: _device.deviceId),
+              ),
+            ),
+          ),
+          IconButton(
               onPressed: _busy ? null : _refresh,
               icon: const Icon(Icons.refresh))
         ],
@@ -127,25 +244,32 @@ class _DeviceScreenState extends State<DeviceScreen> {
           padding: const EdgeInsets.all(16),
           children: [
             _statusCard(),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             _controlCard(),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             if (_samples.length > 1) _chartCard(),
             if (_ack != null)
               Padding(
-                padding: const EdgeInsets.only(top: 12),
+                padding: const EdgeInsets.only(top: 14),
                 child: GlassCard(
-                  child: Text('ACK: $_ack',
-                      style: const TextStyle(color: AppTheme.accent)),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle,
+                          color: AppTheme.accent, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text('ACK: $_ack',
+                            style:
+                                const TextStyle(color: AppTheme.accent)),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             if (_err != null)
               Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: GlassCard(
-                  child: Text(_err!,
-                      style: const TextStyle(color: AppTheme.danger)),
-                ),
+                padding: const EdgeInsets.only(top: 14),
+                child: InlineErrorCard(message: _err!, onRetry: _refresh),
               ),
           ],
         ),
@@ -154,15 +278,16 @@ class _DeviceScreenState extends State<DeviceScreen> {
   }
 
   Widget _statusCard() {
-    final unit = _device.temperatureUnit ?? 'C';
-    String formatTemp(double? t) =>
-        t == null ? '--' : '${t.toStringAsFixed(1)}°$unit';
+    String ft(double? t) => formatTemp(t, _unit);
     String formatRemaining(String? iso) {
-      if (iso == null) return '--';
+      if (iso == null || iso.isEmpty) return '--';
       final d = DateTime.tryParse(iso);
       if (d == null) return iso;
       return DateFormat('MMM d, HH:mm').format(d.toLocal());
     }
+
+    final online = (_device.status ?? '').toLowerCase() == 'online';
+    final statusColor = online ? AppTheme.accent : AppTheme.accent2;
 
     return GlassCard(
       child: Column(
@@ -170,29 +295,56 @@ class _DeviceScreenState extends State<DeviceScreen> {
         children: [
           Row(children: [
             const Text('Status',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+            const SizedBox(width: 8),
+            if (_liveConnected)
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppTheme.accent.withValues(alpha: 0.14),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                      color: AppTheme.accent.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(Icons.circle, size: 7, color: AppTheme.accent),
+                    SizedBox(width: 4),
+                    Text('LIVE',
+                        style: TextStyle(
+                            color: AppTheme.accent,
+                            fontSize: 9,
+                            letterSpacing: 0.6,
+                            fontWeight: FontWeight.w700)),
+                  ],
+                ),
+              ),
             const Spacer(),
             Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
               decoration: BoxDecoration(
-                color: AppTheme.accent.withValues(alpha: 0.12),
+                color: statusColor.withValues(alpha: 0.14),
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
-                    color: AppTheme.accent.withValues(alpha: 0.4)),
+                    color: statusColor.withValues(alpha: 0.5), width: 1),
               ),
               child: Text(_device.status ?? 'unknown',
-                  style: const TextStyle(
-                      color: AppTheme.accent, fontSize: 12)),
+                  style: TextStyle(
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600)),
             ),
           ]),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: _StatBlock(
                   label: 'F1',
-                  valueTop: formatTemp(_device.f1Temp),
+                  valueTop: ft(_device.f1Temp),
                   valueBot: _device.f1On ? 'HEATING' : 'off',
                   accent: _device.f1On,
                 ),
@@ -201,20 +353,63 @@ class _DeviceScreenState extends State<DeviceScreen> {
               Expanded(
                 child: _StatBlock(
                   label: 'F2',
-                  valueTop: formatTemp(_device.f2Temp),
+                  valueTop: ft(_device.f2Temp),
                   valueBot: _device.f2On ? 'HEATING' : 'off',
                   accent: _device.f2On,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          _kv('F1 remaining', formatRemaining(_device.f1RemainingTime)),
-          _kv('F2 remaining', formatRemaining(_device.f2RemainingTime)),
-          _kv('WiFi', (_device.wifiConnected ?? false) ? 'connected' : 'offline'),
-          _kv('Firmware', _device.firmwareVersion ?? '--'),
-          _kv('Last seen',
-              _device.lastSeen == null ? '--' : _device.lastSeen!),
+          const SizedBox(height: 10),
+          _summaryRow(formatRemaining),
+          _ExpandToggle(
+            open: _detailsOpen,
+            onToggle: () => setState(() => _detailsOpen = !_detailsOpen),
+            label: 'Details',
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState: _detailsOpen
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Column(
+                children: [
+                  _kv('F1 remaining', formatRemaining(_device.f1RemainingTime)),
+                  _kv('F2 remaining', formatRemaining(_device.f2RemainingTime)),
+                  _kv('WiFi',
+                      (_device.wifiConnected ?? false) ? 'connected' : 'offline'),
+                  _kv('Firmware', _device.firmwareVersion ?? '--'),
+                  _kv('Last seen', _device.lastSeen ?? '--'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summaryRow(String Function(String?) fmt) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 6, bottom: 2),
+      child: Row(
+        children: [
+          const Icon(Icons.schedule, size: 14, color: AppTheme.textDim),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              _device.f1On
+                  ? 'F1 ends ${fmt(_device.f1RemainingTime)}'
+                  : _device.f2On
+                      ? 'F2 ends ${fmt(_device.f2RemainingTime)}'
+                      : 'Idle',
+              style: const TextStyle(fontSize: 12, color: AppTheme.textDim),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
@@ -243,7 +438,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
         children: [
           Row(children: const [
             Text('Control',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
             SizedBox(width: 8),
             Icon(Icons.warning_amber, size: 16, color: AppTheme.accent2),
           ]),
@@ -251,37 +446,51 @@ class _DeviceScreenState extends State<DeviceScreen> {
           const Text(
               'Payload wrapper not yet confirmed. Writes may be rejected or disrupt a ferment.',
               style: TextStyle(fontSize: 12, color: AppTheme.textDim)),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: [
-              _btn(
-                _device.f1On ? 'Stop F1' : 'Start F1',
-                () => _run(_device.f1On ? 'Stop F1' : 'Start F1',
-                    () => _cmd.setHeaterF1(_device.deviceId, !_device.f1On)),
+          _ExpandToggle(
+            open: _controlOpen,
+            onToggle: () => setState(() => _controlOpen = !_controlOpen),
+            label: 'Show controls',
+          ),
+          AnimatedCrossFade(
+            duration: const Duration(milliseconds: 220),
+            crossFadeState: _controlOpen
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: [
+                  _btn(
+                    _device.f1On ? 'Stop F1' : 'Start F1',
+                    () => _run(_device.f1On ? 'Stop F1' : 'Start F1',
+                        () => _cmd.setHeaterF1(_device.deviceId, !_device.f1On)),
+                  ),
+                  _btn(
+                    _device.f2On ? 'Stop F2' : 'Start F2',
+                    () => _run(_device.f2On ? 'Stop F2' : 'Start F2',
+                        () => _cmd.setHeaterF2(_device.deviceId, !_device.f2On)),
+                  ),
+                  _btn('F1 timer 3d',
+                      () => _run('F1 timer 3d',
+                          () => _cmd.setBrewTimer(_device.deviceId, 'F1', 3))),
+                  _btn('F2 timer 7d',
+                      () => _run('F2 timer 7d',
+                          () => _cmd.setBrewTimer(_device.deviceId, 'F2', 7))),
+                  _btn('Sound on',
+                      () => _run('Sound on',
+                          () => _cmd.setSound(_device.deviceId, true))),
+                  _btn('Sound off',
+                      () => _run('Sound off',
+                          () => _cmd.setSound(_device.deviceId, false))),
+                  _dangerBtn('Safety stop',
+                      () => _run('Safety stop',
+                          () => _cmd.safetyStop(_device.deviceId))),
+                ],
               ),
-              _btn(
-                _device.f2On ? 'Stop F2' : 'Start F2',
-                () => _run(_device.f2On ? 'Stop F2' : 'Start F2',
-                    () => _cmd.setHeaterF2(_device.deviceId, !_device.f2On)),
-              ),
-              _btn('F1 timer 3d',
-                  () => _run('F1 timer 3d',
-                      () => _cmd.setBrewTimer(_device.deviceId, 'F1', 3))),
-              _btn('F2 timer 7d',
-                  () => _run('F2 timer 7d',
-                      () => _cmd.setBrewTimer(_device.deviceId, 'F2', 7))),
-              _btn('Sound on',
-                  () => _run('Sound on',
-                      () => _cmd.setSound(_device.deviceId, true))),
-              _btn('Sound off',
-                  () => _run('Sound off',
-                      () => _cmd.setSound(_device.deviceId, false))),
-              _dangerBtn('Safety stop',
-                  () => _run('Safety stop',
-                      () => _cmd.safetyStop(_device.deviceId))),
-            ],
+            ),
           ),
         ],
       ),
@@ -306,7 +515,10 @@ class _DeviceScreenState extends State<DeviceScreen> {
     final t0 = _samples.first.ts.toDouble();
     List<FlSpot> spots(double? Function(TempSample) pick) => _samples
         .where((s) => pick(s) != null)
-        .map((s) => FlSpot((s.ts - t0).toDouble() / 60, pick(s)!))
+        .map((s) => FlSpot(
+              (s.ts - t0).toDouble() / 60,
+              convertTemp(pick(s), _unit)!,
+            ))
         .toList();
 
     final f1 = spots((s) => s.f1Temp);
@@ -317,7 +529,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text('Temperature history',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           SizedBox(
             height: 180,
@@ -371,28 +583,47 @@ class _StatBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 220),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.03),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: accent
+              ? [
+                  AppTheme.accent.withValues(alpha: 0.14),
+                  AppTheme.accent.withValues(alpha: 0.04),
+                ]
+              : [
+                  Colors.white.withValues(alpha: 0.04),
+                  Colors.white.withValues(alpha: 0.02),
+                ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+            color: accent
+                ? AppTheme.accent.withValues(alpha: 0.3)
+                : Colors.white.withValues(alpha: 0.08)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(label,
               style: const TextStyle(
-                  color: AppTheme.textDim, fontSize: 12)),
+                  color: AppTheme.textDim,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
           Text(valueTop,
               style: const TextStyle(
                   fontSize: 24, fontWeight: FontWeight.w700)),
           Text(valueBot,
               style: TextStyle(
-                  fontSize: 12,
-                  color:
-                      accent ? AppTheme.accent : AppTheme.textDim)),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.5,
+                  color: accent ? AppTheme.accent : AppTheme.textDim)),
         ],
       ),
     );
@@ -414,5 +645,39 @@ class _LegendDot extends StatelessWidget {
       const SizedBox(width: 6),
       Text(label, style: const TextStyle(fontSize: 12)),
     ]);
+  }
+}
+
+class _ExpandToggle extends StatelessWidget {
+  final bool open;
+  final VoidCallback onToggle;
+  final String label;
+  const _ExpandToggle(
+      {required this.open, required this.onToggle, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onToggle,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 6),
+        child: Row(
+          children: [
+            Text(label,
+                style: const TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.accent,
+                    fontWeight: FontWeight.w600)),
+            AnimatedRotation(
+              turns: open ? 0.5 : 0,
+              duration: const Duration(milliseconds: 180),
+              child: const Icon(Icons.expand_more,
+                  size: 18, color: AppTheme.accent),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
