@@ -203,14 +203,14 @@ class _DevicesScreenState extends State<DevicesScreen> {
                           style: TextStyle(
                               fontSize: 26, fontWeight: FontWeight.w700)),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.menu_book_outlined),
-                      tooltip: 'Recipes',
+                    TextButton.icon(
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
                             builder: (_) => const RecipesScreen()),
                       ),
+                      icon: const Icon(Icons.menu_book_outlined, size: 20),
+                      label: const Text('Recipes'),
                     ),
                     IconButton(
                       icon: const Icon(Icons.settings_outlined),
