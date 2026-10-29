@@ -47,3 +47,5 @@ keyAlias=scobysense
 ## Legal
 
 ScobySense is an independent, third-party client. "KOMBU" and "Fermenstation" are trademarks of their respective owners and are used here only to identify the compatible hardware. This project provides no warranty; use at your own risk, and comply with the device manufacturer's own terms.
+
+If you are the rights holder and would like this project removed, open an issue at <https://github.com/Predator04/ScobySense/issues> and it will be taken down.
