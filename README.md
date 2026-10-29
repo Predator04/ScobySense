@@ -1,28 +1,54 @@
 # ScobySense
 
-A community-built Android companion for the **Fermenstation** kombucha brewer — live brew read-out, full device control, and an in-app recipe library, in a clean glass UI.
+A clean, community-built Android companion for the **Fermenstation** kombucha brewer — live brew monitoring, full device control, and an in-app recipe library.
 
-> **Unofficial.** ScobySense is not made by, endorsed by, or affiliated with the device manufacturer. It talks to the same AWS backend the official app uses, using your own account. It can break if that backend changes.
+<p align="center">
+  <img src="https://img.shields.io/github/v/release/Predator04/ScobySense?label=latest" alt="Latest release">
+  <img src="https://img.shields.io/badge/platform-Android-brightgreen" alt="Platform">
+  <img src="https://img.shields.io/badge/license-Non--commercial-blue" alt="License">
+  <img src="https://img.shields.io/badge/made_with-Flutter-02569B" alt="Flutter">
+</p>
+
+> **Unofficial fan project.** ScobySense is not made by, endorsed by, or affiliated with the device manufacturer. It talks to the same cloud backend the official app uses, with your own account. It can break if that backend changes.
+
+## Screenshots
+
+| Sign in | Live brew | Recipes |
+|---------|-----------|---------|
+| ![Sign in](docs/screenshots/login.png) | ![Live brew](docs/screenshots/device.png) | ![Recipes](docs/screenshots/recipes.png) |
 
 ## Features
 
-- **Sign in with your account** — credentials go only to Amazon Cognito; login is saved securely and auto-refreshes.
-- **Live F1 / F2 read-out** — real-time temperatures and remaining brew time for both fermenters, plus brew-cycle history and batch tracking.
-- **Full device control** — set a brew timer in **days, hours, or minutes**, toggle the sound, and turn a fermenter off, all from the app.
-- **Recipes** — built-in kombucha and soda recipes plus your own. Add, edit, and remove recipes, and manage the category tabs (add/rename). Dual-unit measurements (metric / US).
-- **12-hour / 24-hour time** toggle.
-- **Update banner** — checks for new releases and shows an "update available" prompt without auto-installing anything.
-- **First-launch legal disclaimer** and persistent terms.
-- Local device rename, WiFi status label, pull-to-refresh, and local alert notifications.
+**Monitoring**
+- Real-time F1 / F2 temperatures and remaining brew time
+- Brew-cycle history and batch tracking
+- Live updates pushed over the device's realtime channel
+
+**Control**
+- Set a brew timer in **days, hours, or minutes**
+- Turn a fermenter off from the app
+- Toggle the sound
+
+**Recipes**
+- Built-in kombucha and soda recipes (metric + US units)
+- Add, edit, and remove your own
+- Manage category tabs — add and rename them
+
+**Quality of life**
+- Save login (secure storage, auto-refresh)
+- 12-hour / 24-hour time toggle
+- Passive "update available" banner
+- Local device rename, WiFi status, pull-to-refresh
+- Local alert notifications
+- First-launch legal disclaimer
 
 ## Install
 
-Download the latest APK from **[Releases](https://github.com/Predator04/ScobySense/releases)** and sideload it:
+1. Grab the latest APK from **[Releases](https://github.com/Predator04/ScobySense/releases)**.
+2. Open it and allow "install unknown apps" when prompted.
+3. Sign in with the account you use in the official app.
 
-1. Download `ScobySense-vX.Y.Z.apk`.
-2. Open it on your phone and allow "install unknown apps" when prompted.
-
-You need a Fermenstation device already paired in the **official app** before ScobySense can see it.
+You need a Fermenstation device already paired in the official app before ScobySense can see it.
 
 ## Privacy
 
@@ -35,7 +61,7 @@ flutter pub get
 flutter build apk --release
 ```
 
-Release signing requires a `keystore.properties` file (not committed) next to `android/`:
+Release signing needs a `keystore.properties` file (not committed) next to `android/`:
 
 ```
 storeFile=../scobysense-release.keystore
@@ -43,6 +69,14 @@ storePassword=...
 keyPassword=...
 keyAlias=scobysense
 ```
+
+## FAQ
+
+**Is this the official app?** No. It's an independent third-party client.
+
+**Do I need a Fermenstation?** Yes — it reads and controls your own device through your account.
+
+**Is it free?** Yes. Personal, non-commercial use is free. See the [license](LICENSE).
 
 ## Legal
 
