@@ -392,7 +392,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
   Future<void> _showBrewDurationSheet(String side) async {
     final isF1 = side.toUpperCase() == 'F1';
     final minDays = 1;
-    final maxDays = 14;
+    final maxDays = 30;
     final current = isF1 ? _f1Days : _f2Days;
     int selected = current.clamp(minDays, maxDays);
 
