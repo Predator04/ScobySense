@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/brew_cycle.dart';
 import '../services/appsync_client.dart';
 import '../services/auth_service.dart';
 import '../services/errors.dart';
+import '../services/prefs.dart';
 import '../theme.dart';
+import '../utils/time_format.dart';
 import '../widgets/glass_card.dart';
 
 class BatchScreen extends StatefulWidget {
@@ -25,11 +26,18 @@ class BatchScreen extends StatefulWidget {
 class _BatchScreenState extends State<BatchScreen> {
   late final AppSyncClient _client = AppSyncClient(widget.auth);
   Future<BrewCycleReport>? _future;
+  bool _use24Hour = false;
 
   @override
   void initState() {
     super.initState();
     _future = _client.brewCycleReport(widget.deviceId);
+    _loadTimeFormat();
+  }
+
+  Future<void> _loadTimeFormat() async {
+    final v = await AppPrefs.use24Hour();
+    if (mounted) setState(() => _use24Hour = v);
   }
 
   Future<void> _refresh() async {
@@ -256,5 +264,5 @@ class _BatchScreenState extends State<BatchScreen> {
   DateTime? _parseIso(String? iso) =>
       (iso == null || iso.isEmpty) ? null : DateTime.tryParse(iso)?.toLocal();
 
-  String _fmt(DateTime d) => DateFormat('MMM d HH:mm').format(d);
+  String _fmt(DateTime d) => formatAppDateTime(d, _use24Hour);
 }

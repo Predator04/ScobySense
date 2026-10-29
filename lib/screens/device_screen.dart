@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../models/device.dart';
 import '../services/appsync_client.dart';
 import '../services/auth_service.dart';
@@ -12,6 +11,7 @@ import '../services/notification_service.dart';
 import '../services/prefs.dart';
 import '../services/subscription_client.dart';
 import '../theme.dart';
+import '../utils/time_format.dart';
 import 'batch_screen.dart';
 import 'schedule_screen.dart';
 import '../widgets/glass_card.dart';
@@ -45,11 +45,13 @@ class _DeviceScreenState extends State<DeviceScreen> {
   bool _detailsOpen = false;
   bool _controlOpen = false;
   String _unit = 'F';
+  bool _use24Hour = false;
 
   @override
   void initState() {
     super.initState();
     _loadUnit();
+    _loadTimeFormat();
     _loadHistory();
     _loadAlertRules();
     _refresh();
@@ -113,6 +115,11 @@ class _DeviceScreenState extends State<DeviceScreen> {
     if (mounted) setState(() => _unit = u);
   }
 
+  Future<void> _loadTimeFormat() async {
+    final v = await AppPrefs.use24Hour();
+    if (mounted) setState(() => _use24Hour = v);
+  }
+
   Future<void> _loadAlertRules() async {
     try {
       final rules = await _client.listAlertRules();
@@ -172,7 +179,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
         backgroundColor: AppTheme.bg2,
         title: Text(label),
         content: const Text(
-            'The pushCommand payload wrapper is not fully confirmed. If an active ferment is running, this could disrupt it. Continue?'),
+            'Control commands are still being verified and could disrupt an active ferment. Continue?'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -283,7 +290,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
       if (iso == null || iso.isEmpty) return '--';
       final d = DateTime.tryParse(iso);
       if (d == null) return iso;
-      return DateFormat('MMM d, HH:mm').format(d.toLocal());
+      return formatAppDateTime(d.toLocal(), _use24Hour);
     }
 
     final online = (_device.status ?? '').toLowerCase() == 'online';
@@ -444,7 +451,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
           ]),
           const SizedBox(height: 4),
           const Text(
-              'Payload wrapper not yet confirmed. Writes may be rejected or disrupt a ferment.',
+              'Controls are still being verified. Commands may be rejected or disrupt a ferment.',
               style: TextStyle(fontSize: 12, color: AppTheme.textDim)),
           _ExpandToggle(
             open: _controlOpen,
