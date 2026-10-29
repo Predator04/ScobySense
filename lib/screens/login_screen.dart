@@ -98,11 +98,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Kombu',
+                                Text('ScobySense',
                                     style: TextStyle(
                                         fontSize: 24,
                                         fontWeight: FontWeight.w700)),
-                                Text('Fermenstation client',
+                                Text('Kombucha brewer companion',
                                     style: TextStyle(
                                         color: KombuTheme.textDim,
                                         fontSize: 13)),

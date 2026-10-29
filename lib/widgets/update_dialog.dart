@@ -268,7 +268,7 @@ class _UpdatePromptDialogState extends State<UpdatePromptDialog> {
         ]),
         const SizedBox(height: 12),
         const Text(
-          'Confirm the Android install prompt to finish updating. If it did not appear, allow "install unknown apps" for Kombu in system settings and retry.',
+          'Confirm the Android install prompt to finish updating. If it did not appear, allow "install unknown apps" for ScobySense in system settings and retry.',
           style: TextStyle(fontSize: 13, color: KombuTheme.textDim),
         ),
         const SizedBox(height: 20),
