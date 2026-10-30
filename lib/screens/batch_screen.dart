@@ -59,27 +59,33 @@ class _BatchScreenState extends State<BatchScreen> {
 
   Future<void> _editNotes(BrewStage stage) async {
     final controller = TextEditingController(text: stage.notes ?? '');
-    final text = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.bg2,
-        title: Text('Notes — ${stage.side ?? ''} ${stage.eventType ?? ''}'),
-        content: TextField(
-          controller: controller,
-          maxLines: 4,
-          decoration: const InputDecoration(
-            hintText: 'Starter origin, flavour notes, pH readings…',
+    String? text;
+    try {
+      text = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.bg2,
+          title: Text('Notes — ${stage.side ?? ''} ${stage.eventType ?? ''}'),
+          content: TextField(
+            controller: controller,
+            maxLines: 4,
+            decoration: const InputDecoration(
+              hintText: 'Starter origin, flavour notes, pH readings…',
+            ),
           ),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Cancel')),
+            ElevatedButton(
+                onPressed: () => Navigator.pop(ctx, controller.text),
+                child: const Text('Save')),
+          ],
         ),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          ElevatedButton(
-              onPressed: () => Navigator.pop(ctx, controller.text),
-              child: const Text('Save')),
-        ],
-      ),
-    );
+      );
+    } finally {
+      controller.dispose();
+    }
     if (text == null) return;
     if (DemoMode.active) {
       _snack('Demo mode — note not saved.');

@@ -43,11 +43,13 @@ class _DeviceScreenState extends State<DeviceScreen> {
   late final DeviceSubscriptionClient _sub =
       DeviceSubscriptionClient(widget.auth);
   StreamSubscription<BrewerDevice>? _subListen;
+  StreamSubscription<bool>? _subConn;
   final _history = HistoryStore();
   late BrewerDevice _device = widget.initial;
   Timer? _poll;
   Timer? _ticker;
   bool _liveConnected = false;
+  bool _deviceRemoved = false;
   List<Map<String, dynamic>> _alertRules = const [];
   DateTime? _lastF1Expected;
   DateTime? _lastF2Expected;
@@ -92,11 +94,14 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
   Future<void> _startLive() async {
     _subListen = _sub.updates.listen(_onLiveUpdate);
+    _subConn = _sub.connectivity.listen((on) {
+      if (!mounted) return;
+      setState(() => _liveConnected = on);
+    });
     await _sub.start();
-    if (mounted) setState(() => _liveConnected = true);
   }
 
-  void _onLiveUpdate(BrewerDevice d) {
+  Future<void> _onLiveUpdate(BrewerDevice d) async {
     if (d.deviceId != _device.deviceId) return;
     final sample = TempSample(
       ts: DateTime.now().millisecondsSinceEpoch ~/ 1000,
@@ -105,12 +110,13 @@ class _DeviceScreenState extends State<DeviceScreen> {
       f1Status: d.f1Status,
       f2Status: d.f2Status,
     );
-    _history.append(d.deviceId, sample);
+    // Await so this write is serialized through HistoryStore's per-device
+    // chain with the 60s poll's append.
+    await _history.append(d.deviceId, sample);
     _checkNotifications(d);
     if (!mounted) return;
     setState(() {
       _device = d;
-      _liveConnected = true;
       _err = null;
     });
   }
@@ -200,6 +206,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
     _poll?.cancel();
     _ticker?.cancel();
     _subListen?.cancel();
+    _subConn?.cancel();
     if (!DemoMode.active) {
       _sub.stop();
     }
@@ -223,10 +230,24 @@ class _DeviceScreenState extends State<DeviceScreen> {
     }
     try {
       final devices = await _client.listDevices();
-      final match = devices.firstWhere(
-        (d) => d.deviceId == _device.deviceId,
-        orElse: () => _device,
-      );
+      final stillThere =
+          devices.any((d) => d.deviceId == _device.deviceId);
+      if (!stillThere) {
+        _poll?.cancel();
+        _poll = null;
+        if (!DemoMode.active) {
+          await _sub.stop();
+        }
+        if (!mounted) return;
+        setState(() {
+          _deviceRemoved = true;
+          _liveConnected = false;
+          _err = 'This device is no longer on this account.';
+        });
+        return;
+      }
+      final match =
+          devices.firstWhere((d) => d.deviceId == _device.deviceId);
       final sample = TempSample(
         ts: DateTime.now().millisecondsSinceEpoch ~/ 1000,
         f1Temp: match.f1Temp,
@@ -353,7 +374,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
             ),
           ),
           IconButton(
-              onPressed: _busy ? null : _refresh,
+              onPressed: (_busy || _deviceRemoved) ? null : _refresh,
               icon: const Icon(Icons.refresh))
         ],
       ),
@@ -366,13 +387,14 @@ class _DeviceScreenState extends State<DeviceScreen> {
             padding: const EdgeInsets.all(16),
             children: [
               _updateBanner(),
+              if (_deviceRemoved) _removedBanner(),
               _statusCard(),
               const SizedBox(height: 14),
               _recipesButton(),
               const SizedBox(height: 14),
-              _controlCard(),
-              const SizedBox(height: 14),
-              if (_samples.length > 1) _chartCard(),
+              if (!_deviceRemoved) _controlCard(),
+              if (!_deviceRemoved) const SizedBox(height: 14),
+              if (!_deviceRemoved && _samples.length > 1) _chartCard(),
               if (_ack != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 14),
@@ -406,6 +428,14 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
   Future<void> _promptRename() async {
     final controller = TextEditingController(text: _localName ?? '');
+    try {
+      await _promptRenameWith(controller);
+    } finally {
+      controller.dispose();
+    }
+  }
+
+  Future<void> _promptRenameWith(TextEditingController controller) async {
     final result = await showDialog<String?>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -921,6 +951,31 @@ class _DeviceScreenState extends State<DeviceScreen> {
     );
   }
 
+  Widget _removedBanner() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: GlassCard(
+        child: Row(
+          children: [
+            const Icon(Icons.link_off, color: AppTheme.accent2, size: 20),
+            const SizedBox(width: 10),
+            const Expanded(
+              child: Text(
+                'This device is no longer on this account. '
+                'Updates have been stopped.',
+                style: TextStyle(color: AppTheme.accent2, fontSize: 13),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).maybePop(),
+              child: const Text('Back'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _updateBanner() {
     return ValueListenableBuilder<ReleaseInfo?>(
       valueListenable: UpdateState.available,
@@ -1100,6 +1155,9 @@ class _DeviceScreenState extends State<DeviceScreen> {
     final f1 = spots((s) => s.f1Temp);
     final f2 = spots((s) => s.f2Temp);
     final allSpots = [...f1, ...f2];
+    // Every sample's temp can be null (device not reporting yet) — in that
+    // case there's nothing to plot and allSpots.first would throw.
+    if (allSpots.isEmpty) return const SizedBox.shrink();
 
     double maxX = 0;
     for (final sp in allSpots) {

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'errors.dart';
 
 /// Loads bundled + custom recipes and tracks which ones the user removed.
 /// Custom recipes carry a `custom: true` flag so the UI can distinguish them.
@@ -17,6 +18,15 @@ class RecipeStore {
         .cast<Map<String, dynamic>>();
   }
 
+  // When a stored JSON blob fails to decode, copy it to a .bak key so the next
+  // write doesn't silently wipe user data. Users can inspect/recover from the
+  // backup via adb/shared_preferences if needed.
+  Future<void> _backup(SharedPreferences p, String key, String raw) async {
+    try {
+      await p.setString('$key.bak', raw);
+    } catch (_) {}
+  }
+
   Future<List<Map<String, dynamic>>> loadCustom() async {
     final p = await SharedPreferences.getInstance();
     final s = p.getString(_kCustom);
@@ -28,6 +38,7 @@ class RecipeStore {
           .map((e) => {...e, 'custom': true})
           .toList();
     } catch (_) {
+      await _backup(p, _kCustom, s);
       return const [];
     }
   }
@@ -68,10 +79,14 @@ class RecipeStore {
 
   /// Insert-or-replace a custom recipe by slug. Used by edit flow so a
   /// bundled recipe edited by the user is saved under its original slug
-  /// (and overrides the bundled copy on load).
+  /// (and overrides the bundled copy on load). Throws [ServerFailure] if
+  /// slug is missing — callers must handle so a bad save doesn't silently
+  /// pop with a success result.
   Future<void> upsertCustom(Map<String, dynamic> recipe) async {
     final slug = recipe['slug']?.toString();
-    if (slug == null || slug.isEmpty) return;
+    if (slug == null || slug.isEmpty) {
+      throw const ServerFailure('Recipe is missing a slug.');
+    }
     final p = await SharedPreferences.getInstance();
     final current = await loadCustom();
     final list = current
@@ -115,6 +130,7 @@ class RecipeStore {
     try {
       return (jsonDecode(s) as List).map((e) => e.toString()).toList();
     } catch (_) {
+      await _backup(p, _kCategories, s);
       return const [];
     }
   }
@@ -129,6 +145,7 @@ class RecipeStore {
       final map = jsonDecode(s) as Map<String, dynamic>;
       return map.map((k, v) => MapEntry(k, v.toString()));
     } catch (_) {
+      await _backup(p, _kRenames, s);
       return const {};
     }
   }
@@ -147,10 +164,16 @@ class RecipeStore {
     final set = <String>{};
     for (final r in merged) {
       final t = r['tag']?.toString();
-      if (t != null && t.isNotEmpty) set.add(effectiveTag(t, renames));
+      if (t == null || t.isEmpty) continue;
+      final isCustom = r['custom'] == true;
+      // Only apply renames to bundled recipe tags. Custom recipe tags are
+      // already stored under the display name (renameCategory rewrites them),
+      // so re-mapping them merges a re-added old name into the new label and
+      // makes it unselectable.
+      set.add(isCustom ? t : effectiveTag(t, renames));
     }
     for (final c in customCats) {
-      if (c.isNotEmpty) set.add(effectiveTag(c, renames));
+      if (c.isNotEmpty) set.add(c);
     }
     final list = set.toList()..sort();
     return list;
@@ -163,11 +186,13 @@ class RecipeStore {
     final current = await loadCustomCategories();
     final renames = await loadRenames();
     final existing = <String>{
-      for (final c in current) effectiveTag(c, renames),
+      for (final c in current) c,
     };
     for (final r in await loadMerged()) {
       final t = r['tag']?.toString();
-      if (t != null && t.isNotEmpty) existing.add(effectiveTag(t, renames));
+      if (t == null || t.isEmpty) continue;
+      final isCustom = r['custom'] == true;
+      existing.add(isCustom ? t : effectiveTag(t, renames));
     }
     if (existing.contains(trimmed)) return;
     final next = [...current, trimmed];

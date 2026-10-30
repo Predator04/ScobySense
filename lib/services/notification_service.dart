@@ -115,11 +115,14 @@ class NotificationService {
   /// `*RemainingTime` ISO timestamp has just passed).
   Future<void> brewTimerDone(BrewerDevice device, String side) async {
     final tag = 'timer:${device.deviceId}:$side';
+    // Fold deviceId into the notification id so device B's F1-done doesn't
+    // replace device A's open notification. (Android IDs are 32-bit signed.)
+    final composite = Object.hash(device.deviceId, side) & 0x7fffffff;
     await _show(
       tag,
       'Brew timer done',
       '${device.deviceName ?? device.deviceId} — $side cycle complete.',
-      id: 200 + side.hashCode.abs() % 100,
+      id: 200 + (composite % 100000),
     );
   }
 }

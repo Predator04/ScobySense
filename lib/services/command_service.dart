@@ -1,8 +1,16 @@
+import 'dart:math';
 import 'appsync_client.dart';
 
 String commandTopic(String deviceId) => 'kombu/$deviceId/down/cmd';
 
-String _cmdId() => 'scobysense-${DateTime.now().millisecondsSinceEpoch}';
+int _cmdCounter = 0;
+final _cmdRand = Random();
+String _cmdId() {
+  final ms = DateTime.now().millisecondsSinceEpoch;
+  final n = (_cmdCounter = (_cmdCounter + 1) & 0xffff);
+  final r = _cmdRand.nextInt(1 << 24).toRadixString(36);
+  return 'scobysense-$ms-$n-$r';
+}
 
 class CommandService {
   final AppSyncClient client;
@@ -30,6 +38,8 @@ class CommandService {
     });
   }
 
+  // TODO: verify target-vs-params shape against the real device —
+  // other commands put the toggle under params; set_sound currently uses target.
   Future<bool> setSound(String deviceId, bool on) {
     return client.pushCommand(commandTopic(deviceId), {
       'command': 'set_sound',

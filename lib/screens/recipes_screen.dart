@@ -32,6 +32,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
       final items = await _store.loadMerged();
       final renames = await _store.loadRenames();
       final cats = await _store.listCategories();
+      if (!mounted) return;
       setState(() {
         _all = items;
         _renames = renames;
@@ -40,6 +41,7 @@ class _RecipesScreenState extends State<RecipesScreen> {
         _loading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _loading = false;

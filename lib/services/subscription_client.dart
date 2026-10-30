@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:web_socket_channel/io.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'appsync_client.dart';
 import 'auth_service.dart';
 import '../models/device.dart';
 
@@ -24,16 +25,23 @@ class DeviceSubscriptionClient {
   String? _subId;
   bool _closed = false;
   int _backoffMs = 2000;
+  bool _connected = false;
 
   final _controller = StreamController<BrewerDevice>.broadcast();
   Stream<BrewerDevice> get updates => _controller.stream;
 
+  final _connectivity = StreamController<bool>.broadcast();
+
+  /// Emits `true` when a subscription data stream is live, `false` on
+  /// disconnect / server-sent 'complete' / dead keepalive. UI drives the
+  /// LIVE badge from this.
+  Stream<bool> get connectivity => _connectivity.stream;
+
   DeviceSubscriptionClient(this.auth);
 
-  static const _realtimeHost =
-      '46advo6mrng7znsfp6jzkkircy.appsync-realtime-api.us-east-1.amazonaws.com';
-  static const _apiHost =
-      '46advo6mrng7znsfp6jzkkircy.appsync-api.us-east-1.amazonaws.com';
+  static final String _apiHost = Uri.parse(AppSyncConfig.url).host;
+  static final String _realtimeHost =
+      _apiHost.replaceFirst('appsync-api', 'appsync-realtime-api');
 
   static const _onUpdateDevice = r'''
     subscription OnUpdateDevice {
@@ -60,6 +68,12 @@ class DeviceSubscriptionClient {
   Future<void> start() async {
     _closed = false;
     await _connect();
+  }
+
+  void _setConnected(bool v) {
+    if (_connected == v) return;
+    _connected = v;
+    if (!_connectivity.isClosed) _connectivity.add(v);
   }
 
   Future<void> _connect() async {
@@ -120,6 +134,7 @@ class DeviceSubscriptionClient {
         _armKeepalive();
         break;
       case 'data':
+        _setConnected(true);
         _handleData(msg);
         break;
       case 'error':
@@ -127,6 +142,13 @@ class DeviceSubscriptionClient {
         _scheduleReconnect();
         break;
       case 'complete':
+        // Server ended this subscription. The socket itself may still be
+        // alive (keepalives keep arriving) but no data will ever come again.
+        // Previously we did nothing here, leaving the UI stuck on LIVE while
+        // staying permanently stale. Tear down and reconnect so the next
+        // start() installs a fresh subscription.
+        _setConnected(false);
+        _scheduleReconnect();
         break;
     }
   }
@@ -174,6 +196,7 @@ class DeviceSubscriptionClient {
 
   void _scheduleReconnect() {
     _teardownSocket();
+    _setConnected(false);
     if (_closed) return;
     _reconnectTimer?.cancel();
     final delay = _backoffMs;
@@ -198,6 +221,8 @@ class DeviceSubscriptionClient {
     _closed = true;
     _reconnectTimer?.cancel();
     _teardownSocket();
+    _setConnected(false);
     await _controller.close();
+    await _connectivity.close();
   }
 }

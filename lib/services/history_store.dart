@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,30 +24,65 @@ class TempSample {
         'f2Status': f2Status,
       };
 
-  factory TempSample.fromJson(Map<String, dynamic> j) => TempSample(
-        ts: (j['ts'] as num).toInt(),
-        f1Temp: (j['f1Temp'] as num?)?.toDouble(),
-        f2Temp: (j['f2Temp'] as num?)?.toDouble(),
-        f1Status: j['f1Status'] as String?,
-        f2Status: j['f2Status'] as String?,
-      );
+  /// Returns null if the entry is unusable (missing/invalid `ts`). Callers
+  /// filter nulls out so one bad record can't poison the whole load.
+  static TempSample? tryFromJson(Map<String, dynamic> j) {
+    final rawTs = j['ts'];
+    if (rawTs is! num) return null;
+    return TempSample(
+      ts: rawTs.toInt(),
+      f1Temp: (j['f1Temp'] as num?)?.toDouble(),
+      f2Temp: (j['f2Temp'] as num?)?.toDouble(),
+      f1Status: j['f1Status'] as String?,
+      f2Status: j['f2Status'] as String?,
+    );
+  }
 }
 
 class HistoryStore {
   static const _cap = 2000;
   static String _key(String deviceId) => 'history:$deviceId';
 
+  // Per-device write chain so concurrent appends (poll + live push) don't
+  // read-modify-write the same slot and lose samples.
+  final Map<String, Future<void>> _pending = {};
+
   Future<List<TempSample>> load(String deviceId) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key(deviceId));
     if (raw == null || raw.isEmpty) return [];
-    final list = (jsonDecode(raw) as List).cast<Map<String, dynamic>>();
-    return list.map(TempSample.fromJson).toList();
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! List) return [];
+      final out = <TempSample>[];
+      for (final e in decoded) {
+        if (e is Map<String, dynamic>) {
+          final s = TempSample.tryFromJson(e);
+          if (s != null) out.add(s);
+        }
+      }
+      return out;
+    } catch (_) {
+      return [];
+    }
   }
 
-  Future<void> append(String deviceId, TempSample sample) async {
+  Future<void> append(String deviceId, TempSample sample) {
+    final prev = _pending[deviceId] ?? Future<void>.value();
+    final next = prev.then((_) => _doAppend(deviceId, sample))
+        .catchError((_) {});
+    _pending[deviceId] = next;
+    return next;
+  }
+
+  Future<void> _doAppend(String deviceId, TempSample sample) async {
     final prefs = await SharedPreferences.getInstance();
-    final existing = await load(deviceId);
+    List<TempSample> existing;
+    try {
+      existing = await load(deviceId);
+    } catch (_) {
+      existing = <TempSample>[];
+    }
     existing.add(sample);
     final trimmed =
         existing.length > _cap ? existing.sublist(existing.length - _cap) : existing;

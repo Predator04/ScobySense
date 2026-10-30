@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../services/errors.dart';
 import '../services/recipe_store.dart';
 import '../theme.dart';
 import '../widgets/glass_card.dart';
@@ -78,69 +79,89 @@ class _AddRecipeScreenState extends State<AddRecipeScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
-    final steps = _steps.text
-        .split('\n')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
-    final warnings = _warnings.text
-        .split('\n')
-        .map((s) => s.trim())
-        .where((s) => s.isNotEmpty)
-        .toList();
+    try {
+      final steps = _steps.text
+          .split('\n')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      final warnings = _warnings.text
+          .split('\n')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
 
-    final base = _isEditing
-        ? (Map<String, dynamic>.from(widget.initial!)..remove('custom'))
-        : <String, dynamic>{'soda': false};
+      final base = _isEditing
+          ? (Map<String, dynamic>.from(widget.initial!)..remove('custom'))
+          : <String, dynamic>{'soda': false};
 
-    base['slug'] = _isEditing
-        ? widget.initial!['slug']
-        : RecipeStore.slugify(_title.text.trim());
-    base['title'] = _title.text.trim();
+      base['slug'] = _isEditing
+          ? widget.initial!['slug']
+          : RecipeStore.slugify(_title.text.trim());
+      base['title'] = _title.text.trim();
 
-    void setOrClear(String key, String value) {
-      if (value.isEmpty) {
-        base.remove(key);
+      void setOrClear(String key, String value) {
+        if (value.isEmpty) {
+          base.remove(key);
+        } else {
+          base[key] = value;
+        }
+      }
+
+      setOrClear('type', _type.text.trim());
+      setOrClear('ferment_temp', _fermentTemp.text.trim());
+      setOrClear('summary', _summary.text.trim());
+
+      // Resolve category.
+      String? tag;
+      if (_selectedCategory == _kNewCategorySentinel) {
+        final n = _newCategory.text.trim();
+        if (n.isNotEmpty) {
+          await _store.addCategory(n);
+          tag = n;
+        }
+      } else if (_selectedCategory != null) {
+        tag = _selectedCategory;
+      }
+      if (tag == null || tag.isEmpty) {
+        base.remove('tag');
       } else {
-        base[key] = value;
+        base['tag'] = tag;
       }
-    }
 
-    setOrClear('type', _type.text.trim());
-    setOrClear('ferment_temp', _fermentTemp.text.trim());
-    setOrClear('summary', _summary.text.trim());
-
-    // Resolve category.
-    String? tag;
-    if (_selectedCategory == _kNewCategorySentinel) {
-      final n = _newCategory.text.trim();
-      if (n.isNotEmpty) {
-        await _store.addCategory(n);
-        tag = n;
+      if (steps.isEmpty) {
+        base.remove('steps');
+      } else {
+        base['steps'] = steps;
       }
-    } else if (_selectedCategory != null) {
-      tag = _selectedCategory;
-    }
-    if (tag == null || tag.isEmpty) {
-      base.remove('tag');
-    } else {
-      base['tag'] = tag;
-    }
+      if (warnings.isEmpty) {
+        base.remove('warning_signs');
+      } else {
+        base['warning_signs'] = warnings.join('\n');
+      }
 
-    if (steps.isEmpty) {
-      base.remove('steps');
-    } else {
-      base['steps'] = steps;
+      await _store.upsertCustom(base);
+      if (!mounted) return;
+      Navigator.pop(context, true);
+    } on AppFailure catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.danger,
+          content: Text('Couldn\'t save recipe: ${e.message}'),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          backgroundColor: AppTheme.danger,
+          content: Text('Couldn\'t save recipe: $e'),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
-    if (warnings.isEmpty) {
-      base.remove('warning_signs');
-    } else {
-      base['warning_signs'] = warnings.join('\n');
-    }
-
-    await _store.upsertCustom(base);
-    if (!mounted) return;
-    Navigator.pop(context, true);
   }
 
   @override

@@ -4,6 +4,7 @@ import 'screens/login_screen.dart';
 import 'screens/devices_screen.dart';
 import 'screens/terms_screen.dart';
 import 'services/auth_service.dart';
+import 'services/demo_mode.dart';
 import 'services/prefs.dart';
 import 'services/update_service.dart';
 import 'services/update_state.dart';
@@ -60,6 +61,8 @@ class _ScobySenseAppState extends State<ScobySenseApp> with WidgetsBindingObserv
 
   Future<void> _silentUpdateCheck() async {
     if (_checking) return;
+    // Demo mode is a no-account preview; it should not phone home for releases.
+    if (DemoMode.active) return;
     _checking = true;
     try {
       final info = await _updater.packageInfo();
