@@ -835,7 +835,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                 children: [
                   _kv('F1 remaining', formatRemaining(_device.f1RemainingTime)),
                   _kv('F2 remaining', formatRemaining(_device.f2RemainingTime)),
-                  _kv('WiFi (device-reported)', _wifiLabel(online)),
+                  _kv('WiFi', _wifiLabel(online)),
                   _kv('Firmware', _device.firmwareVersion ?? '--'),
                   _kv('Last seen', _device.lastSeen ?? '--'),
                 ],
@@ -850,7 +850,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
   String _wifiLabel(bool online) {
     final connected = _device.wifiConnected ?? false;
     if (connected) return 'connected';
-    if (online) return 'offline · via cloud';
+    if (online) return 'online · via cloud';
     return 'offline';
   }
 
