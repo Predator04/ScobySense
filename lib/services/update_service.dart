@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:path_provider/path_provider.dart';
@@ -13,6 +14,7 @@ class ReleaseInfo {
   final String apkUrl;
   final String apkName;
   final int apkSize;
+  final String? sha256Url;
   final String? htmlUrl;
   final String? bodyNotes;
 
@@ -22,6 +24,7 @@ class ReleaseInfo {
     required this.apkUrl,
     required this.apkName,
     required this.apkSize,
+    this.sha256Url,
     this.htmlUrl,
     this.bodyNotes,
   });
@@ -152,27 +155,73 @@ class UpdateService {
     if (tag.isEmpty) return null;
     final assets = (body['assets'] as List?) ?? const [];
     Map<String, dynamic>? apk;
+    String? shaUrl;
     for (final a in assets) {
       if (a is Map<String, dynamic>) {
         final name = (a['name'] as String?) ?? '';
-        if (name.toLowerCase().endsWith('.apk')) {
+        final lower = name.toLowerCase();
+        if (apk == null && lower.endsWith('.apk')) {
           apk = a;
-          break;
+        } else if (shaUrl == null && lower.endsWith('.apk.sha256')) {
+          shaUrl = a['browser_download_url'] as String?;
         }
       }
     }
     if (apk == null) {
       return null;
     }
+    // If the sha256 asset came in a different ordering (sha256 before apk),
+    // match it by apk name prefix as a sanity check.
+    final apkName = (apk['name'] as String?) ?? 'scobysense-update.apk';
+    if (shaUrl == null) {
+      for (final a in assets) {
+        if (a is Map<String, dynamic>) {
+          final name = (a['name'] as String?) ?? '';
+          if (name.toLowerCase() == '$apkName.sha256'.toLowerCase()) {
+            shaUrl = a['browser_download_url'] as String?;
+            break;
+          }
+        }
+      }
+    }
     return ReleaseInfo(
       tag: tag,
       version: SemVer.parse(tag),
       apkUrl: (apk['browser_download_url'] as String?) ?? '',
-      apkName: (apk['name'] as String?) ?? 'scobysense-update.apk',
+      apkName: apkName,
       apkSize: (apk['size'] as num?)?.toInt() ?? 0,
+      sha256Url: shaUrl,
       htmlUrl: body['html_url'] as String?,
       bodyNotes: body['body'] as String?,
     );
+  }
+
+  Future<String?> fetchExpectedSha256(ReleaseInfo release) async {
+    final url = release.sha256Url;
+    if (url == null || url.isEmpty) return null;
+    http.Response resp;
+    try {
+      resp = await _client.get(
+        Uri.parse(url),
+        headers: const {'User-Agent': 'scobysense-app'},
+      ).timeout(const Duration(seconds: 15));
+    } on TimeoutException {
+      throw const NetworkFailure('Checksum fetch timed out.');
+    } on SocketException catch (e) {
+      throw NetworkFailure('Can\'t reach the checksum server.', e);
+    } catch (e) {
+      throw classifyHttpError(e);
+    }
+    if (resp.statusCode >= 400) {
+      throw ServerFailure('Checksum HTTP ${resp.statusCode}',
+          statusCode: resp.statusCode);
+    }
+    // Accept either "<hex>" or "<hex>  filename".
+    final body = resp.body.trim();
+    if (body.isEmpty) return null;
+    final first = body.split(RegExp(r'\s+')).first.toLowerCase();
+    if (!RegExp(r'^[0-9a-f]{64}$').hasMatch(first)) return null;
+    return first;
   }
 
   Future<ReleaseInfo?> checkForUpdate() async {
@@ -245,6 +294,9 @@ class UpdateService {
 
     ticker = Timer.periodic(const Duration(milliseconds: 250), (_) => emit());
 
+    final digestSink = _DigestCollector();
+    final digestInput = sha256.startChunkedConversion(digestSink);
+
     try {
       await for (final chunk in resp.stream) {
         if (_cancelled) {
@@ -253,11 +305,34 @@ class UpdateService {
           throw const UpdateCancelled();
         }
         sink.add(chunk);
+        digestInput.add(chunk);
         received += chunk.length;
       }
       await sink.flush();
       await sink.close();
       ticker.cancel();
+      digestInput.close();
+
+      final expectedBytes = release.apkSize > 0 ? release.apkSize : total;
+      if (expectedBytes > 0 && received != expectedBytes) {
+        try {
+          if (await file.exists()) await file.delete();
+        } catch (_) {}
+        throw UpdateFailure(
+            'Download truncated: got $received of $expectedBytes bytes.');
+      }
+
+      final expectedHash = await fetchExpectedSha256(release);
+      if (expectedHash != null) {
+        final gotHash = digestSink.value?.toString();
+        if (gotHash == null || gotHash.toLowerCase() != expectedHash) {
+          try {
+            if (await file.exists()) await file.delete();
+          } catch (_) {}
+          throw const UpdateFailure('APK integrity check failed.');
+        }
+      }
+
       onProgress(DownloadProgress(
         received: received,
         total: total == 0 ? received : total,
@@ -281,11 +356,14 @@ class UpdateService {
   }
 
   Future<Directory> _apkDir() async {
-    try {
-      final ext = await getExternalStorageDirectory();
-      if (ext != null) return ext;
-    } catch (_) {}
-    return getApplicationDocumentsDirectory();
+    // Internal cache: not world-writable, not swappable by other apps.
+    // Pinned to <cache>/apk so FileProvider can expose exactly this subdir.
+    final cache = await getTemporaryDirectory();
+    final dir = Directory('${cache.path}/apk');
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+    return dir;
   }
 
   Future<void> installApk(File apk) async {
@@ -295,4 +373,16 @@ class UpdateService {
   void dispose() {
     _client.close();
   }
+}
+
+class _DigestCollector implements Sink<Digest> {
+  Digest? value;
+
+  @override
+  void add(Digest data) {
+    value = data;
+  }
+
+  @override
+  void close() {}
 }

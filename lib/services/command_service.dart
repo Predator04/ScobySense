@@ -1,7 +1,15 @@
 import 'dart:math';
 import 'appsync_client.dart';
 
-String commandTopic(String deviceId) => 'kombu/$deviceId/down/cmd';
+final _deviceIdPattern = RegExp(r'^[A-Za-z0-9_-]+$');
+
+String commandTopic(String deviceId) {
+  if (!_deviceIdPattern.hasMatch(deviceId)) {
+    throw ArgumentError.value(deviceId, 'deviceId',
+        'must match ^[A-Za-z0-9_-]+\$ (no "/", "..", "+", "#")');
+  }
+  return 'kombu/$deviceId/down/cmd';
+}
 
 int _cmdCounter = 0;
 final _cmdRand = Random();
