@@ -1127,10 +1127,10 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
     final spanMin = maxX;
     String formatXLabel(double m) {
-      if (spanMin > 48 * 60) {
+      if (spanMin > 24 * 60) {
         final dt = DateTime.fromMillisecondsSinceEpoch(
             t0Ms + (m * 60 * 1000).round());
-        return appShortDateFormat().format(dt);
+        return '${appShortDateFormat().format(dt)}\n${appTimeOfDayFormat(_use24Hour).format(dt)}';
       } else if (spanMin > 90) {
         final dt = DateTime.fromMillisecondsSinceEpoch(
             t0Ms + (m * 60 * 1000).round());
@@ -1176,7 +1176,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
                   bottomTitles: AxisTitles(
                     sideTitles: SideTitles(
                       showTitles: true,
-                      reservedSize: 28,
+                      reservedSize: 40,
                       interval: xInterval > 0 ? xInterval : 1,
                       getTitlesWidget: (value, meta) {
                         if (value < -0.001 || value > maxX + 0.001) {
@@ -1186,8 +1186,11 @@ class _DeviceScreenState extends State<DeviceScreen> {
                           padding: const EdgeInsets.only(top: 6),
                           child: Text(
                             formatXLabel(value),
+                            textAlign: TextAlign.center,
                             style: const TextStyle(
-                                color: AppTheme.textDim, fontSize: 10),
+                                color: AppTheme.textDim,
+                                fontSize: 10,
+                                height: 1.3),
                           ),
                         );
                       },
