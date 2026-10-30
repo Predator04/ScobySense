@@ -1087,7 +1087,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
       );
 
   Widget _chartCard() {
-    final t0 = _samples.first.ts.toDouble();
+    final t0Ms = _samples.first.ts;
+    final t0 = t0Ms.toDouble();
     List<FlSpot> spots(double? Function(TempSample) pick) => _samples
         .where((s) => pick(s) != null)
         .map((s) => FlSpot(
@@ -1098,6 +1099,48 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
     final f1 = spots((s) => s.f1Temp);
     final f2 = spots((s) => s.f2Temp);
+    final allSpots = [...f1, ...f2];
+
+    double maxX = 0;
+    for (final sp in allSpots) {
+      if (sp.x > maxX) maxX = sp.x;
+    }
+    if (maxX <= 0) maxX = 1;
+
+    double dataMinY = allSpots.first.y;
+    double dataMaxY = allSpots.first.y;
+    for (final sp in allSpots) {
+      if (sp.y < dataMinY) dataMinY = sp.y;
+      if (sp.y > dataMaxY) dataMaxY = sp.y;
+    }
+    final padY = _unit == 'C' ? 0.5 : 1.0;
+    double minY = dataMinY - padY;
+    double maxY = dataMaxY + padY;
+    if ((maxY - minY) < (_unit == 'C' ? 1.0 : 2.0)) {
+      final mid = (minY + maxY) / 2;
+      minY = mid - (_unit == 'C' ? 1.0 : 2.0);
+      maxY = mid + (_unit == 'C' ? 1.0 : 2.0);
+    }
+    final yRange = maxY - minY;
+    final yInterval = yRange / 4;
+    final xInterval = maxX / 4;
+
+    final spanMin = maxX;
+    String formatXLabel(double m) {
+      if (spanMin > 48 * 60) {
+        final dt = DateTime.fromMillisecondsSinceEpoch(
+            t0Ms + (m * 60 * 1000).round());
+        return appShortDateFormat().format(dt);
+      } else if (spanMin > 90) {
+        final dt = DateTime.fromMillisecondsSinceEpoch(
+            t0Ms + (m * 60 * 1000).round());
+        return appTimeOfDayFormat(_use24Hour).format(dt);
+      } else {
+        final diff = (spanMin - m).round();
+        if (diff <= 0) return 'now';
+        return '${diff}m ago';
+      }
+    }
 
     return GlassCard(
       child: Column(
@@ -1107,12 +1150,71 @@ class _DeviceScreenState extends State<DeviceScreen> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           SizedBox(
-            height: 180,
+            height: 200,
             child: LineChart(
               LineChartData(
+                minX: 0,
+                maxX: maxX,
+                minY: minY,
+                maxY: maxY,
                 borderData: FlBorderData(show: false),
-                gridData: const FlGridData(show: false),
-                titlesData: const FlTitlesData(show: false),
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  horizontalInterval: yInterval > 0 ? yInterval : 1,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: Colors.white.withValues(alpha: 0.06),
+                    strokeWidth: 1,
+                  ),
+                ),
+                titlesData: FlTitlesData(
+                  show: true,
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 28,
+                      interval: xInterval > 0 ? xInterval : 1,
+                      getTitlesWidget: (value, meta) {
+                        if (value < -0.001 || value > maxX + 0.001) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: Text(
+                            formatXLabel(value),
+                            style: const TextStyle(
+                                color: AppTheme.textDim, fontSize: 10),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  leftTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      reservedSize: 38,
+                      interval: yInterval > 0 ? yInterval : 1,
+                      getTitlesWidget: (value, meta) {
+                        if ((value - minY).abs() < 0.001 ||
+                            (value - maxY).abs() < 0.001) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 4),
+                          child: Text(
+                            '${value.toStringAsFixed(0)}°$_unit',
+                            style: const TextStyle(
+                                color: AppTheme.textDim, fontSize: 10),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
                 lineBarsData: [
                   if (f1.isNotEmpty)
                     LineChartBarData(
@@ -1132,7 +1234,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Row(children: const [
             _LegendDot(c: AppTheme.accent2, label: 'F1'),
             SizedBox(width: 12),
