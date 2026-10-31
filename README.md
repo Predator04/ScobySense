@@ -13,9 +13,9 @@ A clean, community-built Android companion for the **Fermenstation** kombucha br
 
 ## Screenshots
 
-| Sign in | Live brew | Recipes |
-|---------|-----------|---------|
-| ![Sign in](docs/screenshots/login.png) | ![Live brew](docs/screenshots/device.png) | ![Recipes](docs/screenshots/recipes.png) |
+| Sign in | Devices | Live brew | Recipes |
+|---------|---------|-----------|---------|
+| ![Sign in](docs/screenshots/login.png) | ![Devices](docs/screenshots/devices.png) | ![Live brew](docs/screenshots/device.png) | ![Recipes](docs/screenshots/recipes.png) |
 
 ## Features
 

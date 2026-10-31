@@ -15,12 +15,12 @@ class DemoData {
       deviceName: deviceName,
       status: 'online',
       f1Status: 'off',
-      f1Temp: 27.0,
+      f1Temp: 84.2,
       f1RemainingTime: '',
       f2Status: 'on',
-      f2Temp: 28.0,
+      f2Temp: 82.4,
       f2RemainingTime: f2End.toIso8601String(),
-      temperatureUnit: 'C',
+      temperatureUnit: 'F',
       wifiConnected: true,
       firmwareVersion: '1.4.2-demo',
       lastSeen: now.toIso8601String(),
@@ -35,8 +35,8 @@ class DemoData {
     final out = <TempSample>[];
     for (int i = 59; i >= 0; i--) {
       final t = nowSec - i * 60;
-      final f1 = 26.6 + ((i % 7) - 3) * 0.08;
-      final f2 = 27.8 + ((i % 5) - 2) * 0.07;
+      final f1 = 83.6 + ((i % 7) - 3) * 0.08;
+      final f2 = 82.2 + ((i % 5) - 2) * 0.07;
       out.add(TempSample(
         ts: t,
         f1Temp: double.parse(f1.toStringAsFixed(2)),
