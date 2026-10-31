@@ -10,6 +10,9 @@ class AppPrefs {
   static const kScheduleF2Start = 'schedule_f2_start';
   static const kScheduleF2Stop = 'schedule_f2_stop';
   static const kTermsAccepted = 'terms_accepted_v1';
+  static const kOnboarded = 'onboarded_v1';
+  static const kBiometricLock = 'biometric_lock_enabled';
+  static const kDeviceCoachDismissed = 'device_coach_marks_dismissed_v1';
 
   static const int defaultF1Days = 3;
   static const int defaultF2Days = 7;
@@ -52,6 +55,36 @@ class AppPrefs {
   static Future<void> setTermsAccepted(bool v) async {
     final p = await SharedPreferences.getInstance();
     await p.setBool(kTermsAccepted, v);
+  }
+
+  static Future<bool> onboarded() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getBool(kOnboarded) ?? false;
+  }
+
+  static Future<void> setOnboarded(bool v) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(kOnboarded, v);
+  }
+
+  static Future<bool> biometricLock() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getBool(kBiometricLock) ?? false;
+  }
+
+  static Future<void> setBiometricLock(bool v) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(kBiometricLock, v);
+  }
+
+  static Future<bool> deviceCoachDismissed() async {
+    final p = await SharedPreferences.getInstance();
+    return p.getBool(kDeviceCoachDismissed) ?? false;
+  }
+
+  static Future<void> setDeviceCoachDismissed(bool v) async {
+    final p = await SharedPreferences.getInstance();
+    await p.setBool(kDeviceCoachDismissed, v);
   }
 
   static String _brewKey(String deviceId, String side) =>

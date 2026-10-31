@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../services/biometric_lock.dart';
 import '../services/errors.dart';
 import '../services/prefs.dart';
 import '../services/update_service.dart';
@@ -27,6 +28,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _unit = 'F';
   bool _notif = true;
   bool _use24Hour = false;
+  bool _biometric = false;
+  bool _biometricAvailable = false;
   PackageInfo? _info;
   bool _checking = false;
 
@@ -40,14 +43,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final unit = await AppPrefs.unit();
     final notif = await AppPrefs.notifications();
     final use24 = await AppPrefs.use24Hour();
+    final bio = await AppPrefs.biometricLock();
+    final bioAvail = await BiometricLock.instance.available();
     final info = await PackageInfo.fromPlatform();
     if (!mounted) return;
     setState(() {
       _unit = unit;
       _notif = notif;
       _use24Hour = use24;
+      _biometric = bio;
+      _biometricAvailable = bioAvail;
       _info = info;
     });
+  }
+
+  Future<void> _setBiometric(bool v) async {
+    if (v) {
+      final ok = await BiometricLock.instance
+          .prompt('Enable biometric lock for ScobySense.');
+      if (!ok) {
+        _snack('Biometric lock not enabled.');
+        return;
+      }
+    }
+    await AppPrefs.setBiometricLock(v);
+    if (!mounted) return;
+    setState(() => _biometric = v);
   }
 
   Future<void> _setUnit(String u) async {
@@ -318,6 +339,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 16),
+            const SectionTitle('SECURITY'),
+            GlassCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text('Biometric lock',
+                            style: TextStyle(fontWeight: FontWeight.w700)),
+                      ),
+                      Switch(
+                        value: _biometric,
+                        onChanged:
+                            _biometricAvailable ? _setBiometric : null,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _biometricAvailable
+                        ? 'Unlock ScobySense with your fingerprint, face, or device PIN when returning from the background. Keeps your account state private on shared devices.'
+                        : 'This device does not have biometrics or a device PIN enrolled.',
+                    style: const TextStyle(
+                        fontSize: 12, color: AppTheme.textDim),
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 16),
             const SectionTitle('SESSION'),
             GlassCard(

@@ -1,7 +1,7 @@
 name: scobysense
 description: ScobySense — kombucha brewer companion (community client for the Fermenstation).
 publish_to: 'none'
-version: 0.6.1+32
+version: 0.7.0+33
 
 environment:
   sdk: ^3.7.2
@@ -24,6 +24,9 @@ dependencies:
   flutter_local_notifications: ^17.2.3
   timezone: ^0.9.4
   crypto: ^3.0.3
+  share_plus: ^10.1.2
+  quick_actions: ^1.0.7
+  local_auth: ^2.3.0
 
 dev_dependencies:
   flutter_test:

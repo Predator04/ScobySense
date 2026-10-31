@@ -7,6 +7,7 @@ import '../services/demo_data.dart';
 import '../services/demo_mode.dart';
 import '../services/errors.dart';
 import '../services/prefs.dart';
+import '../services/state_cache.dart';
 import '../services/update_service.dart';
 import '../services/update_state.dart';
 import '../models/device.dart';
@@ -21,7 +22,13 @@ import 'login_screen.dart';
 class DevicesScreen extends StatefulWidget {
   final AuthService auth;
   final UpdateService updater;
-  const DevicesScreen({super.key, required this.auth, required this.updater});
+  final bool openRecipesOnLaunch;
+  const DevicesScreen({
+    super.key,
+    required this.auth,
+    required this.updater,
+    this.openRecipesOnLaunch = false,
+  });
 
   @override
   State<DevicesScreen> createState() => _DevicesScreenState();
@@ -29,8 +36,12 @@ class DevicesScreen extends StatefulWidget {
 
 class _DevicesScreenState extends State<DevicesScreen> {
   late final AppSyncClient _client = AppSyncClient(widget.auth);
-  Future<List<BrewerDevice>>? _future;
+  List<BrewerDevice>? _devices;
+  Object? _loadError;
+  bool _loading = true;
   bool _offline = false;
+  bool _fromCache = false;
+  DateTime? _cacheSavedAt;
   Map<String, String> _localNames = const {};
   late final StreamSubscription<List<ConnectivityResult>> _connSub;
   bool _updateBannerDismissed = false;
@@ -38,11 +49,39 @@ class _DevicesScreenState extends State<DevicesScreen> {
   @override
   void initState() {
     super.initState();
-    _future = _loadDevices();
+    _bootstrap();
     _loadLocalNames();
     _connSub =
         Connectivity().onConnectivityChanged.listen(_handleConnectivity);
     Connectivity().checkConnectivity().then(_handleConnectivity);
+    if (widget.openRecipesOnLaunch) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const RecipesScreen()),
+        );
+      });
+    }
+  }
+
+  Future<void> _bootstrap() async {
+    // Paint cache first (if any) so the screen is never blank. Then kick a
+    // real load — if that succeeds, we overwrite with fresh data; if it fails,
+    // we stay on the cached snapshot with a stale badge.
+    if (!DemoMode.active) {
+      final cached = await StateCache.instance.loadDevices();
+      if (!mounted) return;
+      if (cached != null && cached.devices.isNotEmpty) {
+        setState(() {
+          _devices = cached.devices;
+          _cacheSavedAt = cached.savedAt;
+          _fromCache = true;
+          _loading = false;
+        });
+      }
+    }
+    await _refresh();
   }
 
   Future<List<BrewerDevice>> _loadDevices() {
@@ -73,15 +112,43 @@ class _DevicesScreenState extends State<DevicesScreen> {
   }
 
   Future<void> _refresh() async {
-    final f = _loadDevices();
-    setState(() => _future = f);
+    if (mounted) {
+      setState(() {
+        if (_devices == null) _loading = true;
+        _loadError = null;
+      });
+    }
     _loadLocalNames();
     try {
-      await f;
+      final list = await _loadDevices();
+      if (!mounted) return;
+      setState(() {
+        _devices = list;
+        _loading = false;
+        _fromCache = false;
+        _cacheSavedAt = null;
+      });
+      if (!DemoMode.active) {
+        await StateCache.instance.saveDevices(list);
+      }
     } on AppFailure catch (e) {
-      _snack(e.message);
+      if (!mounted) return;
+      setState(() {
+        _loadError = e;
+        _loading = false;
+      });
+      if (_devices == null) {
+        // Only snack if we have nothing to show.
+      } else {
+        _snack(e.message);
+      }
     } catch (e) {
-      _snack(e.toString());
+      if (!mounted) return;
+      setState(() {
+        _loadError = e;
+        _loading = false;
+      });
+      if (_devices != null) _snack(e.toString());
     }
   }
 
@@ -241,76 +308,89 @@ class _DevicesScreenState extends State<DevicesScreen> {
               if (_offline)
                 const OfflineBanner(
                     message: 'Offline — showing last known state.'),
+              if (_fromCache && !_offline)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: StaleBadge(
+                        label: formatStaleness(_cacheSavedAt)),
+                  ),
+                ),
               Expanded(
                 child: RefreshIndicator(
                   onRefresh: _refresh,
                   color: AppTheme.accent,
-                  child: FutureBuilder<List<BrewerDevice>>(
-                    future: _future,
-                    builder: (context, snap) {
-                      if (snap.connectionState != ConnectionState.done) {
-                        return const Center(
-                            child: CircularProgressIndicator(
-                                color: AppTheme.accent));
-                      }
-                      if (snap.hasError) {
-                        final err = snap.error;
-                        final msg = err is AppFailure
-                            ? err.message
-                            : err.toString();
-                        return ListView(
-                          padding: const EdgeInsets.all(20),
-                          children: [
-                            InlineErrorCard(
-                                message: msg, onRetry: _refresh),
-                          ],
-                        );
-                      }
-                      final devices = snap.data ?? [];
-                      if (devices.isEmpty) {
-                        return ListView(
-                          padding: const EdgeInsets.all(20),
-                          children: const [
-                            GlassCard(
-                              child: Text(
-                                  'No devices on this account. Pair your device in the official app first.',
-                                  style: TextStyle(color: AppTheme.textDim)),
-                            )
-                          ],
-                        );
-                      }
-                      return ListView.separated(
-                        padding: const EdgeInsets.all(20),
-                        itemCount: devices.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 14),
-                        itemBuilder: (_, i) => _DeviceTile(
-                          device: devices[i],
-                          displayName:
-                              _localNames[devices[i].deviceId],
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => DeviceScreen(
-                                  auth: widget.auth,
-                                  updater: widget.updater,
-                                  initial: devices[i],
-                                ),
-                              ),
-                            );
-                            _loadLocalNames();
-                          },
-                        ),
-                      );
-                    },
-                  ),
+                  child: _buildBody(),
                 ),
               ),
               _versionFooter(),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildBody() {
+    if (_loading && _devices == null) {
+      return ListSkeleton(
+        count: 3,
+        tileBuilder: (_) => const DeviceTileSkeleton(),
+      );
+    }
+    final err = _loadError;
+    if (err != null && _devices == null) {
+      final msg = err is AppFailure ? err.message : err.toString();
+      return ListView(
+        padding: const EdgeInsets.all(20),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          InlineErrorCard(
+              message: msg,
+              title: 'Device unreachable',
+              onRetry: _refresh),
+        ],
+      );
+    }
+    final devices = _devices ?? const <BrewerDevice>[];
+    if (devices.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.all(20),
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          EmptyStateCard(
+            icon: Icons.devices_other,
+            title: 'No devices yet',
+            body:
+                'Pair a Fermenstation in the official app (Bluetooth + WiFi setup). Once it is linked to your account, it will appear here automatically.',
+            actionLabel: 'Refresh',
+            onAction: _refresh,
+          ),
+        ],
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.all(20),
+      physics: const AlwaysScrollableScrollPhysics(),
+      itemCount: devices.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 14),
+      itemBuilder: (_, i) => _DeviceTile(
+        device: devices[i],
+        displayName: _localNames[devices[i].deviceId],
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => DeviceScreen(
+                auth: widget.auth,
+                updater: widget.updater,
+                initial: devices[i],
+              ),
+            ),
+          );
+          _loadLocalNames();
+        },
       ),
     );
   }

@@ -2,10 +2,15 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
 import 'screens/devices_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'screens/terms_screen.dart';
+import 'services/appsync_client.dart';
 import 'services/auth_service.dart';
+import 'services/biometric_lock.dart';
+import 'services/command_service.dart';
 import 'services/demo_mode.dart';
 import 'services/prefs.dart';
+import 'services/shortcuts_service.dart';
 import 'services/update_service.dart';
 import 'services/update_state.dart';
 import 'services/errors.dart';
@@ -32,6 +37,7 @@ class _ScobySenseAppState extends State<ScobySenseApp> with WidgetsBindingObserv
   final _updater = UpdateService();
   Timer? _updateTimer;
   bool _checking = false;
+  DateTime? _lastBackground;
 
   @override
   void initState() {
@@ -42,6 +48,11 @@ class _ScobySenseAppState extends State<ScobySenseApp> with WidgetsBindingObserv
       const Duration(minutes: 10),
       (_) => _silentUpdateCheck(),
     );
+    // Wire notification action handler. The handler needs auth-authenticated
+    // network access so it talks through CommandService/AppSyncClient.
+    NotificationService.instance.setActionHandler(_handleNotificationAction);
+    // Register home-screen shortcuts and route taps into the right screen.
+    ShortcutsService.instance.initialize(_handleShortcut);
   }
 
   @override
@@ -54,9 +65,97 @@ class _ScobySenseAppState extends State<ScobySenseApp> with WidgetsBindingObserv
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      _lastBackground = DateTime.now();
+    }
     if (state == AppLifecycleState.resumed) {
       _silentUpdateCheck();
+      _maybeBiometricLock();
     }
+  }
+
+  Future<void> _maybeBiometricLock() async {
+    // Only gate when the user has actually opted in AND we were in the
+    // background long enough to matter (10s avoids the lock blinking on
+    // every system permission sheet).
+    final last = _lastBackground;
+    _lastBackground = null;
+    if (last == null) return;
+    if (DateTime.now().difference(last).inSeconds < 10) return;
+    if (!await AppPrefs.biometricLock()) return;
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null || !ctx.mounted) return;
+    await BiometricLock.instance.gate(ctx);
+  }
+
+  Future<String> _handleNotificationAction(
+      String deviceId, String side, String action) async {
+    final tokens = await _auth.currentTokens();
+    if (tokens == null) {
+      return 'Sign in to run notification actions.';
+    }
+    if (DemoMode.active) {
+      return 'Demo mode — action not sent.';
+    }
+    final cmd = CommandService(AppSyncClient(_auth));
+    switch (action) {
+      case 'stop':
+        await cmd.stopBrew(deviceId, side);
+        return 'Turned off $side on $deviceId.';
+      case 'add_day':
+        final current = await AppPrefs.brewSeconds(deviceId, side);
+        final next = current + 86400;
+        await cmd.setBrewTimerSeconds(deviceId, side, next);
+        await AppPrefs.setBrewSeconds(deviceId, side, next);
+        return 'Extended $side by 1 day.';
+      default:
+        return 'Unknown action: $action';
+    }
+  }
+
+  void _handleShortcut(String type) {
+    final ctx = navigatorKey.currentContext;
+    if (ctx == null) return;
+    switch (type) {
+      case 'live':
+        // Devices screen is the live-brew entry point once signed in.
+        _goToDevices(ctx);
+        break;
+      case 'recipes':
+        _goToDevices(ctx, openRecipes: true);
+        break;
+      case 'demo':
+        DemoMode.active = true;
+        _goToDevices(ctx);
+        break;
+    }
+  }
+
+  Future<void> _goToDevices(BuildContext ctx,
+      {bool openRecipes = false}) async {
+    final signedIn =
+        (await _auth.currentTokens()) != null || DemoMode.active;
+    if (!ctx.mounted) return;
+    if (!signedIn) {
+      Navigator.of(ctx).pushAndRemoveUntil(
+        MaterialPageRoute(
+            builder: (_) => LoginScreen(auth: _auth, updater: _updater)),
+        (_) => false,
+      );
+      return;
+    }
+    Navigator.of(ctx).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => DevicesScreen(
+          auth: _auth,
+          updater: _updater,
+          openRecipesOnLaunch: openRecipes,
+        ),
+      ),
+      (_) => false,
+    );
   }
 
   Future<void> _silentUpdateCheck() async {
@@ -112,7 +211,12 @@ class _BootState extends State<_Boot> {
   Future<_BootStatus> _check() async {
     final termsOk = await AppPrefs.termsAccepted();
     final t = await widget.auth.currentTokens();
-    return _BootStatus(termsOk: termsOk, signedIn: t != null);
+    final onboarded = await AppPrefs.onboarded();
+    return _BootStatus(
+      termsOk: termsOk,
+      signedIn: t != null,
+      onboarded: onboarded,
+    );
   }
 
   @override
@@ -146,9 +250,17 @@ class _BootState extends State<_Boot> {
                 }
                 if (!mounted || !ctx.mounted) return;
               }
-              final next = status.signedIn
-                  ? DevicesScreen(auth: widget.auth, updater: widget.updater)
-                  : LoginScreen(auth: widget.auth, updater: widget.updater);
+              final Widget next;
+              if (status.signedIn) {
+                next = DevicesScreen(
+                    auth: widget.auth, updater: widget.updater);
+              } else if (!status.onboarded) {
+                next = OnboardingScreen(
+                    auth: widget.auth, updater: widget.updater);
+              } else {
+                next = LoginScreen(
+                    auth: widget.auth, updater: widget.updater);
+              }
               Navigator.of(ctx).pushReplacement(
                 MaterialPageRoute(builder: (_) => next),
               );
@@ -164,5 +276,10 @@ class _BootState extends State<_Boot> {
 class _BootStatus {
   final bool termsOk;
   final bool signedIn;
-  const _BootStatus({this.termsOk = false, this.signedIn = false});
+  final bool onboarded;
+  const _BootStatus({
+    this.termsOk = false,
+    this.signedIn = false,
+    this.onboarded = false,
+  });
 }

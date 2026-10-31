@@ -1,10 +1,13 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/brew_cycle.dart';
 import '../services/appsync_client.dart';
 import '../services/auth_service.dart';
 import '../services/demo_data.dart';
 import '../services/demo_mode.dart';
 import '../services/errors.dart';
+import '../services/history_store.dart';
 import '../services/prefs.dart';
 import '../theme.dart';
 import '../utils/time_format.dart';
@@ -29,6 +32,7 @@ class _BatchScreenState extends State<BatchScreen> {
   late final AppSyncClient _client = AppSyncClient(widget.auth);
   Future<BrewCycleReport>? _future;
   bool _use24Hour = false;
+  bool _exporting = false;
 
   @override
   void initState() {
@@ -110,6 +114,66 @@ class _BatchScreenState extends State<BatchScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
+  Future<void> _exportCsv() async {
+    if (_exporting) return;
+    setState(() => _exporting = true);
+    try {
+      final unit = await AppPrefs.unit();
+      final samples = DemoMode.active
+          ? DemoData.history()
+          : await HistoryStore().load(widget.deviceId);
+      if (samples.isEmpty) {
+        _snack('No temperature history recorded yet for this device.');
+        return;
+      }
+      final buf = StringBuffer()
+        ..writeln('# ScobySense temperature history')
+        ..writeln('# device: ${widget.deviceId}')
+        ..writeln('# unit: °$unit')
+        ..writeln('# exported: ${DateTime.now().toIso8601String()}')
+        ..writeln('timestamp,f1_temp,f1_status,f2_temp,f2_status');
+      for (final s in samples) {
+        final iso = DateTime.fromMillisecondsSinceEpoch(s.ts * 1000, isUtc: true)
+            .toIso8601String();
+        final f1 = convertTemp(s.f1Temp, unit);
+        final f2 = convertTemp(s.f2Temp, unit);
+        buf.writeln(
+          '$iso,${f1?.toStringAsFixed(2) ?? ''},${_csv(s.f1Status)},${f2?.toStringAsFixed(2) ?? ''},${_csv(s.f2Status)}',
+        );
+      }
+      final safeName =
+          widget.deviceId.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
+      final filename =
+          'scobysense_${safeName}_${DateTime.now().toUtc().toIso8601String().replaceAll(':', '-').split('.').first}.csv';
+      final bytes = utf8.encode(buf.toString());
+      await Share.shareXFiles(
+        [
+          XFile.fromData(
+            bytes,
+            name: filename,
+            mimeType: 'text/csv',
+          ),
+        ],
+        fileNameOverrides: [filename],
+        subject: 'ScobySense temperature history',
+        text:
+            'Temperature history for ${widget.deviceName ?? widget.deviceId}.',
+      );
+    } catch (e) {
+      _snack('Export failed: $e');
+    } finally {
+      if (mounted) setState(() => _exporting = false);
+    }
+  }
+
+  static String _csv(String? v) {
+    if (v == null || v.isEmpty) return '';
+    if (v.contains(',') || v.contains('"') || v.contains('\n')) {
+      return '"${v.replaceAll('"', '""')}"';
+    }
+    return v;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -117,6 +181,20 @@ class _BatchScreenState extends State<BatchScreen> {
         title: Text(widget.deviceName != null
             ? 'Batches — ${widget.deviceName}'
             : 'Batches'),
+        actions: [
+          IconButton(
+            tooltip: 'Export temperature history (CSV)',
+            icon: _exporting
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppTheme.accent),
+                  )
+                : const Icon(Icons.ios_share),
+            onPressed: _exporting ? null : _exportCsv,
+          ),
+        ],
       ),
       body: AppBackground(
         child: RefreshIndicator(
@@ -126,9 +204,21 @@ class _BatchScreenState extends State<BatchScreen> {
             future: _future,
             builder: (context, snap) {
               if (snap.connectionState != ConnectionState.done) {
-                return const Center(
-                    child:
-                        CircularProgressIndicator(color: AppTheme.accent));
+                return ListSkeleton(
+                  count: 3,
+                  tileBuilder: (_) => const GlassCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SkeletonBlock(height: 14, width: 120),
+                        SizedBox(height: 10),
+                        SkeletonBlock(height: 12, width: 200),
+                        SizedBox(height: 6),
+                        SkeletonBlock(height: 12, width: 160),
+                      ],
+                    ),
+                  ),
+                );
               }
               if (snap.hasError) {
                 final err = snap.error;
@@ -146,11 +236,11 @@ class _BatchScreenState extends State<BatchScreen> {
                 return ListView(
                   padding: const EdgeInsets.all(16),
                   children: const [
-                    GlassCard(
-                      child: Text(
-                        'No brew cycles yet for this device.',
-                        style: TextStyle(color: AppTheme.textDim),
-                      ),
+                    EmptyStateCard(
+                      icon: Icons.science_outlined,
+                      title: 'No brew cycles yet',
+                      body:
+                          'Start a brew from the device screen — F1 and F2 cycles will show up here with notes you can edit.',
                     ),
                   ],
                 );

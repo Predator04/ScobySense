@@ -11,6 +11,7 @@ import '../services/errors.dart';
 import '../services/history_store.dart';
 import '../services/notification_service.dart';
 import '../services/prefs.dart';
+import '../services/state_cache.dart';
 import '../services/subscription_client.dart';
 import '../services/update_service.dart';
 import '../services/update_state.dart';
@@ -65,6 +66,8 @@ class _DeviceScreenState extends State<DeviceScreen> {
   int _f1Seconds = AppPrefs.defaultBrewSeconds('F1');
   int _f2Seconds = AppPrefs.defaultBrewSeconds('F2');
   bool _updateBannerDismissed = false;
+  DateTime? _cacheSavedAt;
+  bool _showCoachMarks = false;
 
   @override
   void initState() {
@@ -73,6 +76,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
     _loadTimeFormat();
     _loadLocalName();
     _loadBrewSeconds();
+    _loadCoachState();
     if (DemoMode.active) {
       _samples = DemoData.history();
       _device = DemoData.device();
@@ -82,6 +86,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
       return;
     }
     _loadHistory();
+    _loadCachedState();
     _loadAlertRules();
     _refresh();
     _poll = Timer.periodic(const Duration(seconds: 60), (_) => _refresh());
@@ -114,10 +119,12 @@ class _DeviceScreenState extends State<DeviceScreen> {
     // chain with the 60s poll's append.
     await _history.append(d.deviceId, sample);
     _checkNotifications(d);
+    await StateCache.instance.saveDevice(d);
     if (!mounted) return;
     setState(() {
       _device = d;
       _err = null;
+      _cacheSavedAt = null;
     });
   }
 
@@ -218,6 +225,29 @@ class _DeviceScreenState extends State<DeviceScreen> {
     if (mounted) setState(() => _samples = s);
   }
 
+  Future<void> _loadCoachState() async {
+    final dismissed = await AppPrefs.deviceCoachDismissed();
+    if (mounted) setState(() => _showCoachMarks = !dismissed);
+  }
+
+  Future<void> _dismissCoach() async {
+    await AppPrefs.setDeviceCoachDismissed(true);
+    if (mounted) setState(() => _showCoachMarks = false);
+  }
+
+  Future<void> _loadCachedState() async {
+    if (DemoMode.active) return;
+    final cached = await StateCache.instance.loadDevice(_device.deviceId);
+    if (!mounted || cached == null) return;
+    // Only overlay cached data if the live refresh hasn't landed yet. We tag
+    // "freshness" by whether _cacheSavedAt is still null AND we haven't yet
+    // got a non-null live sample — if the live update already ran, keep that.
+    setState(() {
+      _device = cached.device;
+      _cacheSavedAt = cached.savedAt;
+    });
+  }
+
   Future<void> _refresh() async {
     if (DemoMode.active) {
       if (!mounted) return;
@@ -258,11 +288,13 @@ class _DeviceScreenState extends State<DeviceScreen> {
       await _history.append(match.deviceId, sample);
       final hist = await _history.load(match.deviceId);
       _checkNotifications(match);
+      await StateCache.instance.saveDevice(match);
       if (!mounted) return;
       setState(() {
         _device = match;
         _samples = hist;
         _err = null;
+        _cacheSavedAt = null;
       });
     } on AppFailure catch (e) {
       if (!mounted) return;
@@ -388,7 +420,20 @@ class _DeviceScreenState extends State<DeviceScreen> {
             children: [
               _updateBanner(),
               if (_deviceRemoved) _removedBanner(),
+              if (_cacheSavedAt != null && !_deviceRemoved)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: StaleBadge(
+                        label: formatStaleness(_cacheSavedAt)),
+                  ),
+                ),
               _statusCard(),
+              if (_showCoachMarks && !_deviceRemoved) ...[
+                const SizedBox(height: 14),
+                _coachCard(),
+              ],
               const SizedBox(height: 14),
               _recipesButton(),
               const SizedBox(height: 14),
@@ -755,6 +800,48 @@ class _DeviceScreenState extends State<DeviceScreen> {
     }
     if (diff.inMinutes >= 1) return '${diff.inMinutes}m left';
     return '<1m left';
+  }
+
+  Widget _coachCard() {
+    return GlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.lightbulb_outline,
+                  color: AppTheme.accent, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text('New here? Quick tour',
+                    style: TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w700)),
+              ),
+              IconButton(
+                tooltip: 'Dismiss tips',
+                icon: const Icon(Icons.close,
+                    color: AppTheme.textDim, size: 18),
+                onPressed: _dismissCoach,
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const _CoachLine(
+            icon: Icons.looks_one_outlined,
+            title: 'F1 & F2 are your brew sides',
+            body:
+                'F1 is the primary fermentation (sweet tea → kombucha). F2 is the second fermentation (adding flavour + building fizz).',
+          ),
+          const SizedBox(height: 10),
+          const _CoachLine(
+            icon: Icons.timer_outlined,
+            title: 'Tap "Set timer" to start a brew',
+            body:
+                'Pick how many days each side should run; ScobySense pings you when the countdown ends and lets you turn it off from the notification.',
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _statusCard() {
@@ -1708,6 +1795,42 @@ class _ExpandToggle extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _CoachLine extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String body;
+  const _CoachLine({
+    required this.icon,
+    required this.title,
+    required this.body,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: AppTheme.accent),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 2),
+              Text(body,
+                  style: const TextStyle(
+                      color: AppTheme.textDim, fontSize: 12, height: 1.4)),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

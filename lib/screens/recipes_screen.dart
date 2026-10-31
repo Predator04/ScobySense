@@ -151,16 +151,35 @@ class _RecipesScreenState extends State<RecipesScreen> {
             ),
       body: AppBackground(
         child: _loading
-            ? const Center(
-                child:
-                    CircularProgressIndicator(color: AppTheme.accent))
+            ? ListSkeleton(
+                count: 4,
+                tileBuilder: (_) => const GlassCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SkeletonBlock(height: 16, width: 180),
+                      SizedBox(height: 10),
+                      SkeletonBlock(height: 12, width: 240),
+                      SizedBox(height: 6),
+                      SkeletonBlock(height: 12, width: 120),
+                    ],
+                  ),
+                ),
+              )
             : _error != null
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(20),
-                      child: GlassCard(
-                        child: Text(_error!,
-                            style: const TextStyle(color: AppTheme.danger)),
+                      child: InlineErrorCard(
+                        message: _error!,
+                        title: 'Couldn\'t load recipes',
+                        onRetry: () {
+                          setState(() {
+                            _loading = true;
+                            _error = null;
+                          });
+                          _load();
+                        },
                       ),
                     ),
                   )
@@ -212,22 +231,43 @@ class _RecipesScreenState extends State<RecipesScreen> {
                         ),
                       ),
                       Expanded(
-                        child: ListView.separated(
-                          padding:
-                              const EdgeInsets.fromLTRB(16, 8, 16, 96),
-                          itemCount: _filtered.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 12),
-                          itemBuilder: (_, i) {
-                            final r = _filtered[i];
-                            return _RecipeCard(
-                              data: r,
-                              displayTag: _tagOf(r),
-                              onEdit: () => _openEdit(r),
-                              onDelete: () => _confirmDelete(r),
-                            );
-                          },
-                        ),
+                        child: _filtered.isEmpty
+                            ? ListView(
+                                padding: const EdgeInsets.all(16),
+                                children: [
+                                  EmptyStateCard(
+                                    icon: Icons.menu_book_outlined,
+                                    title: _query.isNotEmpty || _tag != null
+                                        ? 'No recipes match'
+                                        : 'No recipes yet',
+                                    body: _query.isNotEmpty || _tag != null
+                                        ? 'Try a different search or clear the category filter.'
+                                        : 'Tap "Add recipe" to save your first brew — ingredients, steps, and notes stay on this device.',
+                                    actionLabel: _query.isNotEmpty || _tag != null
+                                        ? null
+                                        : 'Add recipe',
+                                    onAction: _query.isNotEmpty || _tag != null
+                                        ? null
+                                        : _openAdd,
+                                  ),
+                                ],
+                              )
+                            : ListView.separated(
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                                itemCount: _filtered.length,
+                                separatorBuilder: (_, __) =>
+                                    const SizedBox(height: 12),
+                                itemBuilder: (_, i) {
+                                  final r = _filtered[i];
+                                  return _RecipeCard(
+                                    data: r,
+                                    displayTag: _tagOf(r),
+                                    onEdit: () => _openEdit(r),
+                                    onDelete: () => _confirmDelete(r),
+                                  );
+                                },
+                              ),
                       ),
                     ],
                   ),
