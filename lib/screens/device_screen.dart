@@ -14,6 +14,7 @@ import '../services/prefs.dart';
 import '../services/state_cache.dart';
 import '../services/subscription_client.dart';
 import '../services/update_service.dart';
+import '../services/widget_service.dart';
 import '../services/update_state.dart';
 import '../theme.dart';
 import '../utils/time_format.dart';
@@ -80,6 +81,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
     if (DemoMode.active) {
       _samples = DemoData.history();
       _device = DemoData.device();
+      WidgetService.instance.publish(_device);
       _ticker = Timer.periodic(const Duration(seconds: 30), (_) {
         if (mounted) setState(() {});
       });
@@ -120,6 +122,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
     await _history.append(d.deviceId, sample);
     _checkNotifications(d);
     await StateCache.instance.saveDevice(d);
+    await WidgetService.instance.publish(d);
     if (!mounted) return;
     setState(() {
       _device = d;
@@ -250,9 +253,11 @@ class _DeviceScreenState extends State<DeviceScreen> {
 
   Future<void> _refresh() async {
     if (DemoMode.active) {
+      final demo = DemoData.device();
+      await WidgetService.instance.publish(demo);
       if (!mounted) return;
       setState(() {
-        _device = DemoData.device();
+        _device = demo;
         _samples = DemoData.history();
         _err = null;
       });
@@ -289,6 +294,7 @@ class _DeviceScreenState extends State<DeviceScreen> {
       final hist = await _history.load(match.deviceId);
       _checkNotifications(match);
       await StateCache.instance.saveDevice(match);
+      await WidgetService.instance.publish(match);
       if (!mounted) return;
       setState(() {
         _device = match;

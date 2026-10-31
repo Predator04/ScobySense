@@ -9,6 +9,7 @@ import '../services/errors.dart';
 import '../services/prefs.dart';
 import '../services/state_cache.dart';
 import '../services/update_service.dart';
+import '../services/widget_service.dart';
 import '../services/update_state.dart';
 import '../models/device.dart';
 import '../theme.dart';
@@ -130,6 +131,14 @@ class _DevicesScreenState extends State<DevicesScreen> {
       });
       if (!DemoMode.active) {
         await StateCache.instance.saveDevices(list);
+      }
+      // Keep the home-screen widget in sync even when the user never opens the
+      // per-device screen. Prefer a device that's actively brewing so the
+      // widget surfaces the thing someone would want to glance at.
+      if (list.isNotEmpty) {
+        final primary =
+            list.firstWhere((d) => d.f1On || d.f2On, orElse: () => list.first);
+        await WidgetService.instance.publish(primary);
       }
     } on AppFailure catch (e) {
       if (!mounted) return;

@@ -2,4 +2,7 @@
 <resources>
     <color name="scobysense_bg">#04070A</color>
     <color name="ic_launcher_background">#04070A</color>
+    <color name="widget_text">#E2E8F0</color>
+    <color name="widget_dim">#94A3B8</color>
+    <color name="widget_accent">#5EEAD4</color>
 </resources>

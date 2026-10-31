@@ -24,5 +24,9 @@
 -keep class * extends com.google.gson.reflect.TypeToken
 -keepattributes Signature
 
-# Our own method channel entry points
+# Our own method channel entry points + widget receiver
 -keep class com.scobysense.app.** { *; }
+
+# home_widget plugin + the AppWidgetProvider the OS instantiates reflectively.
+-keep class es.antonborri.home_widget.** { *; }
+-keep class * extends android.appwidget.AppWidgetProvider { *; }

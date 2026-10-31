@@ -15,6 +15,8 @@ import 'services/update_service.dart';
 import 'services/update_state.dart';
 import 'services/errors.dart';
 import 'services/notification_service.dart';
+import 'services/state_cache.dart';
+import 'services/widget_service.dart';
 import 'theme.dart';
 
 Future<void> main() async {
@@ -69,11 +71,27 @@ class _ScobySenseAppState extends State<ScobySenseApp> with WidgetsBindingObserv
         state == AppLifecycleState.inactive ||
         state == AppLifecycleState.hidden) {
       _lastBackground = DateTime.now();
+      _refreshWidgetFromCache();
     }
     if (state == AppLifecycleState.resumed) {
       _silentUpdateCheck();
       _maybeBiometricLock();
     }
+  }
+
+  Future<void> _refreshWidgetFromCache() async {
+    // On app background, make sure the widget has the latest state we know
+    // about. The device/devices screens already publish on every refresh;
+    // this is the belt-and-suspenders path for sessions that never opened
+    // one of those screens.
+    final cached = await StateCache.instance.loadDevices();
+    final devices = cached?.devices ?? const [];
+    if (devices.isEmpty) return;
+    final primary = devices.firstWhere(
+      (d) => d.f1On || d.f2On,
+      orElse: () => devices.first,
+    );
+    await WidgetService.instance.publish(primary);
   }
 
   Future<void> _maybeBiometricLock() async {
