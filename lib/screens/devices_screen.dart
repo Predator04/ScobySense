@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import '../services/appsync_client.dart';
 import '../services/demo_data.dart';
@@ -238,7 +239,16 @@ class _DevicesScreenState extends State<DevicesScreen> {
               'shows as its own card on this screen.',
               style: TextStyle(color: AppTheme.textDim, fontSize: 12),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _openOfficialApp,
+                icon: const Icon(Icons.play_arrow, size: 18),
+                label: const Text('Open official app in Play Store'),
+              ),
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
                 Expanded(
@@ -263,6 +273,19 @@ class _DevicesScreenState extends State<DevicesScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _openOfficialApp() async {
+    final url =
+        Uri.parse('https://play.google.com/store/apps/details?id=com.kombu');
+    try {
+      if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+        await launchUrl(Uri.parse('market://details?id=com.kombu'),
+            mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {
+      // Ignore — user can find it manually.
+    }
   }
 
   @override

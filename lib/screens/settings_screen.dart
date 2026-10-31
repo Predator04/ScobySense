@@ -199,6 +199,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(
                         fontSize: 12, color: AppTheme.textDim),
                   ),
+                  const SizedBox(height: 12),
+                  const Text(
+                    'ScobySense is an independent, unofficial companion — not made by, affiliated with, endorsed by, or supported by Kombu / The Fermenstation. The developer is not responsible for any damage to your device, brews, or data. Use at your own risk.',
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.textDim,
+                        height: 1.4),
+                  ),
                 ],
               ),
             ),
